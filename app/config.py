@@ -3,7 +3,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
-
     openai_api_key: str
     embedding_model: str = "text-embedding-3-small"
     llm_model: str = "gpt-4o-mini"
@@ -16,7 +15,7 @@ class Settings(BaseSettings):
     max_history_turns: int = 6
     vector_store_dir: str = "vector_store"
     uploads_dir: str = "uploads"
-    api_title: str = "DocuMind - AI Customer Support Copilot"
+    api_title: str = "DocuMind — AI Customer Support Copilot"
     api_version: str = "1.0.0"
     allowed_origins: list[str] = ["*"]
 

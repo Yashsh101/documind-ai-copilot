@@ -15,44 +15,33 @@ class Chunk:
     score: float = 0.0
     metadata: dict = field(default_factory=dict)
 
-def extract_text_from_pdf(file_bytes: bytes, filename: str = "unknown.pdf") -> str:
+def extract_text(file_bytes: bytes, filename: str) -> str:
     try:
         doc = fitz.open(stream=file_bytes, filetype="pdf")
-    except Exception as exc:
-        raise DocumentProcessingError(f"Cannot open PDF '{filename}': {exc}") from exc
-    pages = [page.get_text("text") for page in doc if page.get_text("text").strip()]
+    except Exception as e:
+        raise DocumentProcessingError(f"Cannot open {filename}: {e}") from e
+    pages = [p.get_text("text") for p in doc if p.get_text("text").strip()]
     doc.close()
-    if not pages:
-        raise DocumentProcessingError(f"No extractable text found in '{filename}'.")
-    return _clean_text("\n\n".join(pages))
+    if not pages: raise DocumentProcessingError(f"No text in {filename}.")
+    raw = "\n\n".join(pages)
+    raw = re.sub(r"\n{3,}","\n\n",raw)
+    raw = re.sub(r"[ \t]+"," ",raw)
+    raw = re.sub(r"-\n(\w)",r"\1",raw)
+    return raw.strip()
 
-def _clean_text(text: str) -> str:
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"-\n(\w)", r"\1", text)
-    return text.strip()
-
-def chunk_text(text: str, source: str = "", start_id: int = 0) -> list[Chunk]:
-    settings = get_settings()
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=settings.chunk_size,
-        chunk_overlap=settings.chunk_overlap,
-        separators=["\n\n", "\n", ". ", " ", ""],
-    )
+def chunk_text(text: str, source: str="", start_id: int=0) -> list[Chunk]:
+    s = get_settings()
+    sp = RecursiveCharacterTextSplitter(
+        chunk_size=s.chunk_size, chunk_overlap=s.chunk_overlap,
+        separators=["\n\n","\n",". "," ",""])
     chunks = []
-    for i, raw in enumerate(splitter.split_text(text)):
-        cleaned = raw.strip()
-        if len(cleaned) < 30:
-            continue
-        chunks.append(Chunk(
-            chunk_id=start_id + i,
-            text=cleaned,
-            source=source,
-            metadata={"source": source, "chunk_index": i},
-        ))
-    logger.info("chunked_document", extra={"source": source, "chunks": len(chunks)})
+    for i,raw in enumerate(sp.split_text(text)):
+        t = raw.strip()
+        if len(t)<30: continue
+        chunks.append(Chunk(chunk_id=start_id+i, text=t, source=source,
+            metadata={"source":source,"index":i}))
+    logger.info(f"ingested {source} into {len(chunks)} chunks")
     return chunks
 
-def ingest_pdf(file_bytes: bytes, filename: str, start_id: int = 0) -> list[Chunk]:
-    text = extract_text_from_pdf(file_bytes, filename)
-    return chunk_text(text, source=filename, start_id=start_id)
+def ingest_pdf(file_bytes: bytes, filename: str, start_id: int=0) -> list[Chunk]:
+    return chunk_text(extract_text(file_bytes, filename), source=filename, start_id=start_id)
