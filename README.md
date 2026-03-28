@@ -1,8 +1,25 @@
-# AI Customer Support Copilot
+# DocuMind — AI Customer Support Copilot
+
+![CI Status](https://github.com/asharma/documind/actions/workflows/ci.yml/badge.svg)
+![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)
 
 A production-grade Retrieval-Augmented Generation (RAG) system that answers customer queries from your own documents.
 
-**Stack:** Python · FastAPI · FAISS · OpenAI · Docker
+**Author:** Yash Sharma, MCA student, AI Engineer
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|---|---|
+| **Language** | Python 3.11 |
+| **API Framework** | FastAPI |
+| **Vector Database** | FAISS |
+| **AI / LLM** | OpenAI (GPT models) |
+| **PDF Parsing** | PyMuPDF |
+| **Testing** | Pytest |
+| **Deployment** | Docker & GitHub Actions |
 
 ---
 
@@ -18,13 +35,14 @@ User query  →  Rewriter  →  Embed  →  Retrieve  →  LLM  →  Answer + Ci
 
 ## Features
 
-- PDF ingestion with semantic chunking
-- Query rewriting for better retrieval precision
-- Source citations in every answer
-- Conversation memory (per session)
-- Inline RAG quality metrics (faithfulness, recall)
-- Structured JSON logging with latency tracking
-- Docker + GitHub Actions CI/CD
+- **RAG pipeline**: Robust pipeline to ingest, embed, and query custom knowledge
+- **FAISS vector search**: High-speed, in-memory similarity search for document chunks
+- **Query rewriting**: LLM-powered query optimization for better context retrieval
+- **Source citations**: Provides verifiable source chunks and scores for every answer
+- **Eval metrics**: Automatically scores context recall and answer faithfulness
+- **Conversation memory**: Maintains chat history to support multi-turn dialogue
+- **Docker**: fully containerized setup for reproducible deployments
+- **CI/CD**: Automated testing and Docker builds via GitHub Actions
 
 ---
 
@@ -33,11 +51,12 @@ User query  →  Rewriter  →  Embed  →  Retrieve  →  LLM  →  Answer + Ci
 ### 1. Clone and set up environment
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ai-support-copilot.git
-cd ai-support-copilot
+git clone https://github.com/YOUR_USERNAME/documind-ai-copilot.git
+cd documind-ai-copilot
 
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+# Windows: .venv\Scripts\activate
+# Mac/Linux: source .venv/bin/activate        
 pip install -r requirements.txt
 ```
 
