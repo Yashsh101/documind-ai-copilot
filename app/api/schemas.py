@@ -11,13 +11,17 @@ class CitationOut(BaseModel):
 class MetricsOut(BaseModel):
     context_recall: float; answer_faithfulness: float; avg_relevance_score: float
 
+class ConfidenceOut(BaseModel):
+    score: float; label: str; should_escalate: bool; reason: str
+
 class UploadResponse(BaseModel):
     status: str; files_processed: int; chunks_stored: int
     total_chunks: int; latency_ms: float
 
 class QueryResponse(BaseModel):
     answer: str; citations: list[CitationOut]; rewritten_query: str
-    eval_metrics: MetricsOut; session_id: str; latency_ms: float
+    eval_metrics: MetricsOut; confidence: ConfidenceOut; actions: list[str]
+    session_id: str; latency_ms: float
 
 class HistoryMessage(BaseModel):
     role: str; content: str
@@ -26,4 +30,5 @@ class ChatHistoryResponse(BaseModel):
     session_id: str; turns: int; history: list[HistoryMessage]
 
 class HealthResponse(BaseModel):
-    status: str; index_ready: bool; total_chunks: int; version: str; model: str
+    status: str; index_ready: bool; total_chunks: int
+    version: str; model: str; features: dict

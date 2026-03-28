@@ -3,22 +3,18 @@ from typing import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-_RESERVED = {
-    "args","created","exc_info","exc_text","filename","funcName",
-    "levelname","levelno","lineno","message","module","msecs","msg",
-    "name","pathname","process","processName","relativeCreated",
-    "stack_info","thread","threadName","taskName",
-}
+_RESERVED = {"args","created","exc_info","exc_text","filename","funcName",
+    "levelname","levelno","lineno","message","module","msecs","msg","name",
+    "pathname","process","processName","relativeCreated","stack_info",
+    "thread","threadName","taskName"}
 
 class _JSONFormatter(logging.Formatter):
     def format(self, record):
         p = {"ts": self.formatTime(record,"%Y-%m-%dT%H:%M:%S"),
              "level": record.levelname, "message": record.getMessage()}
-        if record.exc_info:
-            p["exc"] = self.formatException(record.exc_info)
+        if record.exc_info: p["exc"] = self.formatException(record.exc_info)
         for k,v in record.__dict__.items():
-            if k not in _RESERVED:
-                p[k] = v
+            if k not in _RESERVED: p[k] = v
         return json.dumps(p, default=str)
 
 def _make_logger(name):

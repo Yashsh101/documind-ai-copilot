@@ -3,730 +3,496 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DocuMind — AI Customer Support Copilot</title>
+    <title>DocuMind v2 — AI Customer Support Copilot</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Questrial&display=swap" rel="stylesheet">
-    <!-- Note: Geist/Geist Mono aren't directly on Google Fonts yet, using fallback standard modern fonts similar to Geist (Inter/JetBrains Mono or system-ui) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-base: #09090B;
-            --bg-surface-1: #111113;
-            --bg-surface-2: #18181B;
-            --bg-surface-3: #27272A;
-            --border-1: #2C2C30;
-            --border-2: #3F3F46;
-            --text-main: #FAFAFA;
-            --text-muted: #A1A1AA;
-            --text-dim: #52525B;
-            --color-green: #22C55E;
-            --color-blue: #3B82F6;
-            --color-amber: #F59E0B;
-            --color-red: #EF4444;
-            --font-display: 'Instrument Serif', serif;
-            --font-body: 'Inter', system-ui, sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
+            --bg-surf1: #111113;
+            --bg-surf2: #18181B;
+            --bg-surf3: #27272A;
+            --border: #2C2C30;
+            --text-pri: #FAFAFA;
+            --text-sec: #A1A1AA;
+            --text-mut: #52525B;
+            --c-green: #22C55E;
+            --c-blue: #3B82F6;
+            --c-amber: #F59E0B;
+            --c-red: #EF4444;
+            --f-disp: 'Instrument Serif', serif;
+            --f-body: 'Inter', system-ui, sans-serif;
+            --f-mono: 'JetBrains Mono', monospace;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
         body {
-            font-family: var(--font-body);
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            font-size: 14px;
-            line-height: 1.5;
+            font-family: var(--f-body); background-color: var(--bg-base);
+            color: var(--text-pri); height: 100vh; display: flex;
+            overflow: hidden; font-size: 14px; line-height: 1.5;
         }
 
-        /* Generic utilities */
-        .flex { display: flex; }
-        .flex-col { display: flex; flex-direction: column; }
-        .items-center { align-items: center; }
-        .justify-between { justify-content: space-between; }
-        .gap-2 { gap: 0.5rem; }
-        .gap-4 { gap: 1rem; }
-        .p-4 { padding: 1rem; }
-        .p-6 { padding: 1.5rem; }
+        /* Generic classes */
+        .flex { display: flex; } .flex-col { display: flex; flex-direction: column; }
+        .flex-1 { flex: 1; }
+        .items-center { align-items: center; } .justify-between { justify-content: space-between; }
         .hidden { display: none !important; }
-        .text-sm { font-size: 12px; }
-        .text-xs { font-size: 11px; }
-        .text-muted { color: var(--text-muted); }
-        .mono { font-family: var(--font-mono); }
+        .text-xs { font-size: 12px; } .text-sm { font-size: 13px; }
+        .text-sec { color: var(--text-sec); }
+        .mono { font-family: var(--f-mono); }
+        button { background: none; border: none; color: inherit; cursor: pointer; outline: none; transition: 0.2s; font: inherit;}
+
+        /* Layout Panels */
+        .panel-left { width: 300px; border-right: 1px solid var(--border); background: var(--bg-surf1); display: flex; flex-direction: column; overflow-y: auto; padding: 1.5rem; }
+        .panel-main { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .panel-right { width: 280px; border-left: 1px solid var(--border); background: var(--bg-surf1); display: flex; flex-direction: column; }
+
+        /* Left Panel Specifics */
+        .brand { font-family: var(--f-disp); font-size: 28px; display: flex; align-items: center; gap: 8px; margin-bottom: 2rem;}
+        .brand-badge { background: var(--bg-surf3); font-family: var(--f-mono); font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border); color: var(--text-sec); font-style: normal;}
         
-        button {
-            background: none; border: none; color: inherit; font: inherit;
-            cursor: pointer; outline: none; transition: 0.2s ease;
-        }
-
-        /* Header */
-        header {
-            height: 56px;
-            border-bottom: 1px solid var(--border-1);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 1.5rem;
-            background: rgba(9, 9, 11, 0.8);
-            backdrop-filter: blur(8px);
-            z-index: 10;
-        }
-
-        .logo { font-family: var(--font-display); font-size: 24px; display: flex; align-items: center; gap: 8px;}
-        .logo i { font-style: italic; color: var(--text-muted); font-size: 20px; font-family: var(--font-display);}
-
-        .header-controls { display: flex; align-items: center; gap: 1.5rem; }
-        
-        .session-input {
-            background: var(--bg-surface-1);
-            border: 1px solid var(--border-1);
-            color: var(--text-muted);
-            font-family: var(--font-mono);
-            font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            width: 120px;
-            outline: none;
-        }
-        .session-input:focus { border-color: var(--border-2); color: var(--text-main); }
-
-        .api-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); }
-        .status-dot.ready { background: var(--color-green); box-shadow: 0 0 8px var(--color-green); }
-        .status-dot.offline { background: var(--color-red); box-shadow: 0 0 8px var(--color-red); }
-
-        /* Main Layout */
-        .app-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        /* Left Sidebar */
-        .sidebar {
-            width: 280px;
-            border-right: 1px solid var(--border-1);
-            background: var(--bg-surface-1);
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-        }
-        
-        .upload-zone {
-            border: 1px dashed var(--border-2);
-            border-radius: 8px;
-            padding: 2rem 1rem;
-            text-align: center;
-            margin-bottom: 1.5rem;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-        .upload-zone:hover { border-color: var(--text-muted); background: var(--bg-surface-2); }
-        .upload-zone.dragover { border-color: var(--color-blue); background: rgba(59, 130, 246, 0.1); }
-        .upload-icon { margin-bottom: 8px; color: var(--text-dim); }
-        .upload-zone input[type="file"] { display: none; }
+        .upload-box { border: 1px dashed var(--border); border-radius: 8px; padding: 1.5rem 1rem; text-align: center; cursor: pointer; transition: 0.2s; position: relative; margin-bottom: 1.5rem;}
+        .upload-box:hover { border-color: var(--text-mut); background: var(--bg-surf2); }
+        .upload-box.drag { border-color: var(--c-blue); background: rgba(59,130,246,0.1); }
+        .upload-box input { display: none; }
+        .upload-box svg { color: var(--text-mut); margin-bottom: 8px; }
         
         .file-list { margin-top: 1rem; text-align: left; }
-        .file-item { display: flex; justify-content: space-between; padding: 4px 8px; background: var(--bg-surface-3); border-radius: 4px; margin-bottom: 4px; font-size: 12px;}
+        .file-item { display: flex; justify-content: space-between; padding: 4px 8px; background: var(--bg-surf3); border-radius: 4px; margin-bottom: 4px; font-size: 12px;}
         
-        .btn-primary {
-            width: 100%; padding: 8px; background: var(--text-main); color: var(--bg-base);
-            border-radius: 6px; font-weight: 500; margin-top: 12px; display: none;
-        }
-        .btn-primary:hover { opacity: 0.9; }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { width: 100%; padding: 8px; background: var(--text-pri); color: var(--bg-base); border-radius: 6px; font-weight: 500; margin-top: 12px; display: none; }
+        .btn-primary:hover { opacity: 0.9; } .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .stats-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1.5rem;
-        }
-        .stat-card {
-            background: var(--bg-surface-2); border: 1px solid var(--border-1);
-            padding: 12px; border-radius: 8px;
-        }
-        .stat-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
-        .stat-value { font-family: var(--font-mono); font-size: 16px; font-weight: 500; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 2rem; }
+        .stat-card { background: var(--bg-surf2); border: 1px solid var(--border); padding: 10px; border-radius: 8px; }
+        .stat-lbl { font-size: 11px; color: var(--text-sec); margin-bottom: 4px; }
+        .stat-val { font-family: var(--f-mono); font-size: 14px; font-weight: 500; }
+        .stat-badge { display: inline-block; padding: 2px 6px; font-size: 10px; border-radius: 4px; background: rgba(34,197,94,0.1); color: var(--c-green); border: 1px solid rgba(34,197,94,0.2); margin-top:4px;}
 
-        .metrics-section {
-            border-top: 1px solid var(--border-1);
-            padding-top: 1.5rem;
-        }
-        .metric-item { margin-bottom: 12px; }
-        .metric-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: var(--text-muted); }
-        .metric-bar-bg { width: 100%; height: 4px; background: var(--bg-surface-3); border-radius: 2px; overflow: hidden;}
+        .metrics h3 { font-size: 13px; font-weight: 500; margin-bottom: 1rem; }
+        .metric-row { margin-bottom: 12px; }
+        .metric-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-sec); margin-bottom: 6px; }
+        .metric-bar-bg { width: 100%; height: 4px; background: var(--bg-surf3); border-radius: 2px; overflow: hidden; }
         .metric-bar { height: 100%; width: 0%; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
-        .bar-green { background: var(--color-green); }
-        .bar-blue { background: var(--color-blue); }
-        .bar-white { background: var(--text-main); }
-        .bar-amber { background: var(--color-amber); }
-
-        /* Main Chat Panel */
-        .chat-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-base);
-            position: relative;
-        }
-
-        .empty-state {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; padding: 2rem;
-            pointer-events: none;
-        }
-        .empty-icon { font-family: var(--font-display); font-size: 80px; color: var(--bg-surface-3); font-style: italic; margin-bottom: 1rem;}
-        .empty-title { font-size: 24px; font-weight: 500; margin-bottom: 8px; }
-        .empty-desc { color: var(--text-muted); max-width: 400px; line-height: 1.6; }
-
-        .messages-area {
-            flex: 1; overflow-y: auto; padding: 2rem; scroll-behavior: smooth;
-            display: flex; flex-direction: column; gap: 1.5rem;
-        }
-
-        .message { display: flex; flex-direction: column; max-width: 80%; }
-        .message.user { align-self: flex-end; }
-        .message.bot { align-self: flex-start; }
-
-        .msg-header { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; padding: 0 4px; display: flex; gap: 8px;}
-        .msg-bubble {
-            padding: 12px 16px; border-radius: 12px; line-height: 1.6;
-        }
-        .user .msg-bubble { background: var(--bg-surface-3); color: var(--text-main); border-bottom-right-radius: 4px; }
-        .bot .msg-bubble { background: var(--bg-surface-1); border: 1px solid var(--border-1); border-bottom-left-radius: 4px; }
-
-        .rewrite-badge {
-            display: inline-flex; align-items: center; gap: 4px;
-            background: rgba(245, 158, 11, 0.1); color: var(--color-amber);
-            padding: 2px 8px; border-radius: 12px; font-size: 11px;
-            margin-bottom: 8px; width: fit-content;
-        }
-
-        .citations { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-        .citation-chip {
-            background: rgba(59, 130, 246, 0.1); color: var(--color-blue);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            padding: 2px 8px; border-radius: 4px; font-size: 11px;
-            cursor: help; position: relative;
-        }
         
-        .typing-indicator {
-            display: inline-flex; gap: 4px; padding: 16px 20px;
-            background: var(--bg-surface-1); border: 1px solid var(--border-1);
-            border-radius: 12px; border-bottom-left-radius: 4px; align-self: flex-start;
-        }
-        .dot { width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; opacity: 0.4; animation: blink 1.4s infinite both; }
-        .dot:nth-child(2) { animation-delay: 0.2s; }
-        .dot:nth-child(3) { animation-delay: 0.4s; }
+        .conf-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: #fff;}
+        .bg-high { background: var(--c-green); }
+        .bg-medium { background: var(--c-amber); }
+        .bg-low { background: var(--c-red); }
+        .bg-blue { background: var(--c-blue); }
+        .bg-white { background: var(--text-pri); }
+        .text-amber { color: var(--c-amber); }
+
+        .escalate-banner { margin-top: 1rem; padding: 12px; border-radius: 6px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); display: flex; align-items: flex-start; gap: 8px; color: var(--text-pri); font-size: 12px;}
+
+        /* Main Panel Specifics */
+        .main-header { padding: 0 1.5rem; height: 56px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--bg-base); }
+        .session-ctrl { display: flex; align-items: center; gap: 12px;}
+        .session-in { background: var(--bg-surf1); border: 1px solid var(--border); color: var(--text-sec); padding: 4px 8px; border-radius: 4px; outline: none; font-size: 12px; font-family: var(--f-mono); width: 140px;}
+        .status-ind { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-sec); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-mut); box-shadow: 0 0 8px currentColor; }
+        .dot.ok { background: var(--c-green); color: var(--c-green); }
+        .dot.err { background: var(--c-red); color: var(--c-red); }
+
+        .chat-area { flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; scroll-behavior: smooth; }
+        
+        .empty { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+        .empty-glyph { font-family: var(--f-disp); font-size: 80px; color: var(--bg-surf3); line-height: 1; margin-bottom: 1rem; }
+        .empty h2 { font-size: 20px; font-weight: 500; margin-bottom: 8px; }
+        .empty p { color: var(--text-sec); max-width: 380px; text-align: center; }
+
+        .msg { display: flex; flex-direction: column; max-width: 85%; }
+        .msg.user { align-self: flex-end; }
+        .msg.bot { align-self: flex-start; }
+        .msg-info { font-size: 11px; color: var(--text-mut); margin-bottom: 6px; display: flex; gap: 8px; padding: 0 4px; align-items: center;}
+        
+        .msg-bubble { padding: 14px 18px; border-radius: 12px; line-height: 1.6; font-size: 14px;}
+        .user .msg-bubble { background: var(--bg-surf3); border-bottom-right-radius: 4px; }
+        .bot .msg-bubble { background: var(--bg-surf1); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+        .bot .msg-bubble p { margin-bottom: 8px; }
+        .bot .msg-bubble p:last-child { margin-bottom: 0; }
+        .bot .msg-bubble ul, .bot .msg-bubble ol { margin-left: 20px; margin-bottom: 8px; }
+
+        .pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; background: rgba(245, 158, 11, 0.1); color: var(--c-amber); margin-bottom: 8px; width: fit-content;}
+        .conf-pill { display: inline-flex; padding: 2px 6px; border-radius: 4px; font-size: 10px; color: #fff;}
+        .citations { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .cite-chip { background: rgba(59, 130, 246, 0.1); color: var(--c-blue); border: 1px solid rgba(59, 130, 246, 0.2); padding: 2px 8px; border-radius: 4px; font-size: 11px; cursor: help; position: relative;}
+        .cite-chip:hover::after { content: attr(title); position: absolute; bottom: 100%; left: 0; background: var(--bg-surf2); color: var(--text-pri); padding: 8px; border: 1px solid var(--border); border-radius: 6px; width: 300px; z-index: 10; font-size: 12px; margin-bottom: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .action-btn { background: var(--bg-surf2); border: 1px solid var(--border); color: var(--text-pri); padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        .action-btn:hover { background: var(--bg-surf3); border-color: var(--text-mut); }
+
+        .typing { display: flex; gap: 4px; padding: 16px 20px; background: var(--bg-surf1); border: 1px solid var(--border); border-radius: 12px; border-bottom-left-radius: 4px; align-self: flex-start; }
+        .tdot { width: 6px; height: 6px; background: var(--text-sec); border-radius: 50%; opacity: 0.4; animation: blink 1.4s infinite both; }
+        .tdot:nth-child(2) { animation-delay: 0.2s; }
+        .tdot:nth-child(3) { animation-delay: 0.4s; }
         @keyframes blink { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } }
 
-        .input-area {
-            padding: 1.5rem; background: var(--bg-base);
-            border-top: 1px solid var(--border-1);
-        }
-        .input-wrapper {
-            position: relative; background: var(--bg-surface-1);
-            border: 1px solid var(--border-2); border-radius: 12px;
-            transition: border-color 0.2s;
-        }
-        .input-wrapper:focus-within { border-color: var(--text-muted); background: var(--bg-surface-2); }
+        .input-bar { padding: 1.5rem; border-top: 1px solid var(--border); background: var(--bg-base); }
+        .input-wrap { position: relative; background: var(--bg-surf1); border: 1px solid var(--border); border-radius: 12px; transition: 0.2s; display: flex; flex-direction: column;}
+        .input-wrap:focus-within { border-color: var(--text-sec); background: var(--bg-surf2); }
+        .input-wrap textarea { width: 100%; background: none; border: none; color: var(--text-pri); padding: 14px 44px 14px 16px; font-family: inherit; font-size: 14px; resize: none; outline: none; line-height: 1.5; min-height: 50px; max-height: 200px; border-radius: 12px;}
+        .send-btn { position: absolute; right: 8px; bottom: 8px; width: 32px; height: 32px; background: var(--text-pri); color: var(--bg-base); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .send-btn:hover { background: #ddd; }
+        .send-btn:disabled { background: var(--bg-surf3); color: var(--text-mut); cursor: not-allowed; }
+
+        /* Right Panel Specifics */
+        .tabs { display: flex; border-bottom: 1px solid var(--border); }
+        .tab { flex: 1; text-align: center; padding: 12px; font-size: 13px; color: var(--text-sec); border-bottom: 2px solid transparent; cursor: pointer; transition: 0.2s;}
+        .tab.active { color: var(--text-pri); border-bottom-color: var(--text-pri); }
         
-        textarea {
-            width: 100%; background: none; border: none; color: var(--text-main);
-            padding: 14px 44px 14px 16px; font-family: inherit; font-size: 14px;
-            resize: none; outline: none; line-height: 1.5; min-height: 50px;
-            max-height: 200px; overflow-y: auto; display: block;
-        }
+        .tab-content { flex: 1; overflow-y: auto; padding: 1rem; display: none; }
+        .tab-content.active { display: block; }
         
-        .send-btn {
-            position: absolute; right: 8px; bottom: 8px;
-            width: 32px; height: 32px; background: var(--text-main);
-            color: var(--bg-base); border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .send-btn:hover { opacity: 0.9; }
-        .send-btn:disabled { background: var(--bg-surface-3); color: var(--text-dim); cursor: not-allowed; }
-        .send-btn svg { width: 16px; height: 16px; }
+        .hist-item { padding: 12px; background: var(--bg-surf2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+        .hist-role { font-size: 10px; font-weight: 600; margin-bottom: 4px; color: var(--text-sec); }
+        .hist-role.you { color: var(--c-amber); }
+        .hist-text { font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* Right Sidebar */
-        .history-sidebar {
-            width: 300px; border-left: 1px solid var(--border-1);
-            background: var(--bg-surface-1); display: flex; flex-direction: column;
-        }
-        .history-header {
-            padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-1);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .clear-btn { font-size: 12px; color: var(--text-muted); }
-        .clear-btn:hover { color: var(--color-red); }
-        
-        .history-list { flex: 1; overflow-y: auto; padding: 1rem; }
-        .history-item {
-            padding: 12px; border-radius: 8px; margin-bottom: 8px;
-            background: var(--bg-base); border: 1px solid var(--border-1);
-            transition: 0.2s ease; cursor: pointer;
-        }
-        .history-item:hover { border-color: var(--border-2); }
-        .hist-role { font-size: 10px; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }
-        .hist-role.you { color: var(--color-amber); }
-        .hist-content { font-size: 12px; color: var(--text-main); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .pipe-step { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; font-size: 12px; color: var(--text-sec); }
+        .pipe-icon { color: var(--c-green); flex-shrink: 0; margin-top: 2px;}
 
-        .hist-empty { text-align: center; color: var(--text-dim); font-size: 13px; margin-top: 2rem;}
+        .toast { position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 100%); background: var(--text-pri); color: var(--bg-base); padding: 12px 24px; border-radius: 30px; font-size: 13px; font-weight: 500; z-index: 100; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .toast.show { transform: translate(-50%, 0); opacity: 1; }
+        .toast.err { background: var(--c-red); color: white; }
 
-        /* Toast */
-        .toast {
-            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100%);
-            background: var(--text-main); color: var(--bg-base); padding: 12px 24px;
-            border-radius: 30px; font-weight: 500; font-size: 13px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100;
-            opacity: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-        .toast.error { background: var(--color-red); color: white; }
-
-        /* Custom Scrollbar */
+        /* Scrollbars */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-mut); }
 
-        @media (max-width: 768px) {
-            .app-container { flex-direction: column; }
-            .sidebar, .history-sidebar { width: 100%; border: none; height: auto; max-height: 50vh;}
-            .history-sidebar { border-top: 1px solid var(--border-1); }
+        @media (max-width: 900px) {
+            body { flex-direction: column; overflow-y: auto; height: auto;}
+            .panel-left, .panel-right { width: 100%; border: none; height: auto; max-height: none;}
+            .panel-main { min-height: 80vh; }
         }
     </style>
 </head>
 <body>
 
-    <div id="toast" class="toast hidden">Message</div>
+    <div id="toast" class="toast hidden"></div>
 
-    <header>
-        <div class="logo">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            DocuMind <i>copilot</i>
+    <!-- Left Panel -->
+    <aside class="panel-left">
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            DocuMind <span class="brand-badge">v2</span>
         </div>
-        <div class="header-controls">
-            <input type="text" id="session-id" class="session-input" value="sess_12345" title="Session ID">
-            <div class="api-status">
-                <div id="status-dot" class="status-dot"></div>
-                <span id="status-text">connecting...</span>
+
+        <div class="upload-box" id="drop-zone">
+            <input type="file" id="file-input" multiple accept=".pdf">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <div style="font-size:13px; margin-bottom:4px;">Drag & Drop PDFs</div>
+            <div class="text-xs text-sec">or click to browse</div>
+            <div id="file-list" class="file-list"></div>
+            <button id="index-btn" class="btn-primary">Index Documents</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-lbl">Chunks</div>
+                <div class="stat-val" id="stat-chunks">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">Last Latency</div>
+                <div class="stat-val" id="stat-lat">-- ms</div>
+            </div>
+            <div class="stat-card" style="grid-column: span 2;">
+                <div class="stat-lbl">Active Features</div>
+                <div id="active-feats">
+                    <!-- Feature badges -->
+                </div>
             </div>
         </div>
-    </header>
 
-    <div class="app-container">
-        <!-- Left Sidebar -->
-        <aside class="sidebar p-6">
-            <div class="upload-zone" id="drop-zone">
-                <input type="file" id="file-input" multiple accept=".pdf">
-                <svg class="upload-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                <div style="font-size: 13px; margin-bottom: 4px;">Drag & Drop PDFs</div>
-                <div class="text-xs text-muted">or click to browse</div>
-                <div id="file-list" class="file-list"></div>
-                <button id="index-btn" class="btn-primary">Index Documents</button>
+        <div class="metrics">
+            <h3>Response Quality</h3>
+            
+            <div class="metric-row">
+                <div class="metric-head"><span>Confidence</span><span id="v-conf" class="conf-badge bg-low">N/A</span></div>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-label">Chunks Indexed</div>
-                    <div class="stat-value" id="stat-chunks">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Last Latency</div>
-                    <div class="stat-value" id="stat-latency">-- ms</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Chunk Size</div>
-                    <div class="stat-value">512</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Retrieval</div>
-                    <div class="stat-value">top-5</div>
-                </div>
+            <div class="metric-row">
+                <div class="metric-head"><span>Faithfulness</span><span id="v-faith" class="mono">0%</span></div>
+                <div class="metric-bar-bg"><div id="b-faith" class="metric-bar bg-green"></div></div>
             </div>
+            
+            <div class="metric-row">
+                <div class="metric-head"><span>Context Recall</span><span id="v-recall" class="mono">0%</span></div>
+                <div class="metric-bar-bg"><div id="b-recall" class="metric-bar bg-blue"></div></div>
+            </div>
+            
+            <div class="metric-row">
+                <div class="metric-head"><span>Avg Relevance</span><span id="v-rel" class="mono">0.00</span></div>
+                <div class="metric-bar-bg"><div id="b-rel" class="metric-bar bg-white"></div></div>
+            </div>
+        </div>
 
-            <div class="metrics-section">
-                <h4 style="font-weight: 500; margin-bottom: 1rem; font-size: 13px;">Latest Response Quality</h4>
-                
-                <div class="metric-item">
-                    <div class="metric-header">
-                        <span>Answer Faithfulness</span>
-                        <span id="val-faith" class="mono">0%</span>
-                    </div>
-                    <div class="metric-bar-bg"><div id="bar-faith" class="metric-bar bar-green"></div></div>
-                </div>
-                
-                <div class="metric-item">
-                    <div class="metric-header">
-                        <span>Context Recall</span>
-                        <span id="val-recall" class="mono">0%</span>
-                    </div>
-                    <div class="metric-bar-bg"><div id="bar-recall" class="metric-bar bar-blue"></div></div>
-                </div>
-                
-                <div class="metric-item">
-                    <div class="metric-header">
-                        <span>Avg Relevance</span>
-                        <span id="val-rel" class="mono">0.00</span>
-                    </div>
-                    <div class="metric-bar-bg"><div id="bar-rel" class="metric-bar bar-white"></div></div>
-                </div>
-                
-                <div class="metric-item">
-                    <div class="metric-header">
-                        <span>Execution Time</span>
-                        <span id="val-time" class="mono">0ms</span>
-                    </div>
-                    <div class="metric-bar-bg"><div id="bar-time" class="metric-bar bar-amber"></div></div>
-                </div>
-            </div>
-        </aside>
+        <div id="escalate-banner" class="escalate-banner hidden">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <div>Low confidence — recommend human review</div>
+        </div>
+    </aside>
 
-        <!-- Main Panel -->
-        <main class="chat-panel">
-            <div id="empty-state" class="empty-state">
-                <div class="empty-icon">◎</div>
-                <div class="empty-title">Ask your documents anything.</div>
-                <div class="empty-desc">Upload a PDF and ask any question. DocuMind retrieves the most relevant passages and generates a grounded, cited answer.</div>
+    <!-- Main Panel -->
+    <main class="panel-main">
+        <header class="main-header">
+            <div class="session-ctrl">
+                <span class="text-sm text-sec">Session:</span>
+                <input type="text" id="sess-in" class="session-in" value="">
             </div>
+            <div class="status-ind">
+                <div id="stat-dot" class="dot"></div>
+                <span id="stat-txt">connecting...</span>
+            </div>
+        </header>
 
-            <div id="messages" class="messages-area">
-                <!-- Messages will be appended here -->
+        <div id="chat-area" class="chat-area">
+            <div id="empty" class="empty">
+                <div class="empty-glyph">◎</div>
+                <h2>DocuMind Copilot</h2>
+                <p>Upload your knowledge base and ask complex questions. Powered by Hybrid Retrieval, HyDE, and Reranking.</p>
             </div>
+            <!-- Messages go here -->
+        </div>
 
-            <div class="input-area">
-                <div class="input-wrapper">
-                    <textarea id="query-input" placeholder="Type your question here... (Enter to send)" rows="1"></textarea>
-                    <button id="send-btn" class="send-btn" disabled>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    </button>
-                </div>
+        <div class="input-bar">
+            <div class="input-wrap">
+                <textarea id="q-in" placeholder="Ask a question... (Enter to send)" rows="1"></textarea>
+                <button id="send-btn" class="send-btn" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
             </div>
-        </main>
+        </div>
+    </main>
 
-        <!-- Right Sidebar -->
-        <aside class="history-sidebar">
-            <div class="history-header">
-                <div style="font-weight: 500; font-size: 13px;">History</div>
-                <button id="clear-history-btn" class="clear-btn">Clear</button>
+    <!-- Right Panel -->
+    <aside class="panel-right">
+        <div class="tabs">
+            <div class="tab" data-tab="history">History</div>
+            <div class="tab active" data-tab="pipeline">Pipeline Inspector</div>
+        </div>
+        
+        <!-- History Tab -->
+        <div id="tab-history" class="tab-content">
+            <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
+                <span class="text-sm">Conversation</span>
+                <button id="clear-btn" class="text-xs text-sec hover:text-red">Clear</button>
             </div>
-            <div id="history-list" class="history-list">
-                <div class="hist-empty">No messages yet</div>
+            <div id="hist-list">
+                <div class="text-sm text-mut" style="text-align:center; margin-top:2rem;">No history</div>
             </div>
-        </aside>
-    </div>
+        </div>
+
+        <!-- Pipeline Tab -->
+        <div id="tab-pipeline" class="tab-content active">
+            <div class="text-sm" style="margin-bottom: 1rem;">Latest Query Pipeline</div>
+            <div id="pipe-list">
+                <div class="text-sm text-mut" style="text-align:center; margin-top:2rem;">No queries run yet</div>
+            </div>
+        </div>
+    </aside>
 
     <script>
-        const API_BASE = 'http://localhost:8000/api/v1';
+        const API = 'http://localhost:8000/api/v1';
         
-        // DOM Elements
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const fileList = document.getElementById('file-list');
-        const indexBtn = document.getElementById('index-btn');
-        const statChunks = document.getElementById('stat-chunks');
-        const statLatency = document.getElementById('stat-latency');
-        const statusDot = document.getElementById('status-dot');
-        const statusText = document.getElementById('status-text');
-        
-        const queryInput = document.getElementById('query-input');
-        const sendBtn = document.getElementById('send-btn');
-        const messagesArea = document.getElementById('messages');
-        const emptyState = document.getElementById('empty-state');
-        
-        const sessionIdInput = document.getElementById('session-id');
-        const historyList = document.getElementById('history-list');
-        const clearHistoryBtn = document.getElementById('clear-history-btn');
-        
-        const toast = document.getElementById('toast');
-        
-        // State
-        let selectedFiles = [];
-        let isProcessing = false;
+        // Elems
+        const drop = document.getElementById('drop-zone'), fileIn = document.getElementById('file-input'), fileList = document.getElementById('file-list'), idxBtn = document.getElementById('index-btn');
+        const qIn = document.getElementById('q-in'), sendBtn = document.getElementById('send-btn'), chatFlow = document.getElementById('chat-area'), empty = document.getElementById('empty');
+        const sessIn = document.getElementById('sess-in'), tst = document.getElementById('toast');
+        let files = [], isBusy = false;
 
-        // Utilities
-        function showToast(msg, isError = false) {
-            toast.textContent = msg;
-            toast.className = `toast show ${isError ? 'error' : ''}`;
-            setTimeout(() => toast.className = 'toast hidden', 3000);
-        }
-
-        function generateId() {
-            return 'sess_' + Math.random().toString(36).substring(2, 9);
-        }
+        // Utils
+        const showToast = (txt, err=false) => { tst.textContent=txt; tst.className=`toast show ${err?'err':''}`; setTimeout(()=>tst.className='toast hidden', 3000); };
+        const id=()=>'v2_'+Math.random().toString(36).substring(2,8);
         
-        // Setup Session
-        if(!localStorage.getItem('docu_session')) {
-            localStorage.setItem('docu_session', generateId());
-        }
-        sessionIdInput.value = localStorage.getItem('docu_session');
-        sessionIdInput.addEventListener('change', (e) => {
-            localStorage.setItem('docu_session', e.target.value);
-            loadHistory();
-        });
+        if(!localStorage.getItem('dm_v2_sess')) localStorage.setItem('dm_v2_sess', id());
+        sessIn.value = localStorage.getItem('dm_v2_sess');
+        sessIn.onchange = (e) => { localStorage.setItem('dm_v2_sess', e.target.value); loadHistory(); };
 
-        // Health Polling
-        async function checkHealth() {
+        // Health
+        async function health() {
             try {
-                const res = await fetch(`${API_BASE}/health`);
-                if(res.ok) {
-                    const data = await res.json();
-                    statusDot.className = 'status-dot ready';
-                    statusText.textContent = 'ready';
-                    statChunks.textContent = data.total_chunks;
+                const r = await fetch(API+'/health');
+                if(r.ok) {
+                    const d = await r.json();
+                    document.getElementById('stat-dot').className = 'dot ok';
+                    document.getElementById('stat-txt').textContent = 'API Ready';
+                    document.getElementById('stat-chunks').textContent = d.total_chunks;
+                    
+                    document.getElementById('active-feats').innerHTML = Object.entries(d.features)
+                        .filter(([_,v])=>v)
+                        .map(([k,_])=>`<span class="stat-badge">${k.replace('_',' ')}</span>`).join(' ');
                 } else throw new Error();
             } catch {
-                statusDot.className = 'status-dot offline';
-                statusText.textContent = 'offline';
+                document.getElementById('stat-dot').className = 'dot err';
+                document.getElementById('stat-txt').textContent = 'Offline';
             }
         }
-        setInterval(checkHealth, 15000);
-        checkHealth();
+        setInterval(health, 15000); health();
 
-        // File Upload Handling
-        dropZone.addEventListener('click', (e) => {
-            if(e.target !== indexBtn) fileInput.click();
-        });
-        
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault(); dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault(); dropZone.classList.remove('dragover');
-            handleFiles(e.dataTransfer.files);
-        });
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        // Uploads
+        drop.onclick = (e) => e.target!==idxBtn && fileIn.click();
+        drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('drag'); };
+        drop.ondragleave = () => drop.classList.remove('drag');
+        drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('drag'); procFiles(e.dataTransfer.files); };
+        fileIn.onchange = (e) => procFiles(e.target.files);
 
-        function handleFiles(files) {
-            selectedFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
-            if(selectedFiles.length === 0) {
-                showToast("Only PDF files are supported.", true);
-                return;
-            }
-            fileList.innerHTML = selectedFiles.map(f => 
-                `<div class="file-item"><span>${f.name}</span><span style="color:var(--color-green)">ready</span></div>`
-            ).join('');
-            indexBtn.style.display = 'block';
+        function procFiles(flist) {
+            files = Array.from(flist).filter(f=>f.name.toLowerCase().endsWith('.pdf'));
+            if(!files.length) return showToast('PDFs only', true);
+            fileList.innerHTML = files.map(f=>`<div class="file-item"><span>${f.name}</span><span style="color:var(--c-amber)">pending</span></div>`).join('');
+            idxBtn.style.display = 'block';
         }
 
-        indexBtn.addEventListener('click', async () => {
-            if(selectedFiles.length === 0) return;
-            indexBtn.disabled = true;
-            indexBtn.textContent = 'Indexing...';
+        idxBtn.onclick = async () => {
+            if(!files.length) return;
+            idxBtn.disabled = true; idxBtn.textContent = 'Processing...';
+            const fd = new FormData(); files.forEach(f=>fd.append('files', f));
+            try {
+                const r = await fetch(API+'/upload-documents', {method:'POST', body:fd});
+                const d = await r.json();
+                if(!r.ok) throw new Error(d.detail);
+                showToast(`Indexed ${d.chunks_stored} chunks`);
+                document.getElementById('stat-chunks').textContent = d.total_chunks;
+                document.getElementById('stat-lat').textContent = d.latency_ms + 'ms';
+                fileList.innerHTML = files.map(f=>`<div class="file-item"><span>${f.name}</span><span style="color:var(--c-green)">indexed</span></div>`).join('');
+                files=[]; idxBtn.style.display='none';
+            } catch(e) { showToast(e.message, true); }
+            finally { idxBtn.disabled=false; idxBtn.textContent='Index Documents'; fileIn.value=''; }
+        };
+
+        // Chat
+        qIn.oninput = function() { this.style.height='auto'; this.style.height=this.scrollHeight+'px'; sendBtn.disabled = !this.value.trim(); };
+        qIn.onkeydown = (e) => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); if(!sendBtn.disabled && !isBusy) sendQ(); } };
+        sendBtn.onclick = () => { if(!sendBtn.disabled && !isBusy) sendQ(); };
+
+        const scroll = () => chatFlow.scrollTop = chatFlow.scrollHeight;
+
+        function addM(role, txt) {
+            empty.style.display = 'none';
+            const d = document.createElement('div'); d.className = `msg ${role}`;
+            const rn = role==='user'?'YOU':'DOCUMIND v2';
+            d.innerHTML = `<div class="msg-info"><span>${rn}</span></div><div class="msg-bubble">${txt.replace(/\n/g,'<br>')}</div>`;
+            chatFlow.appendChild(d); scroll(); return d;
+        }
+
+        function addBotFull(d) {
+            empty.style.display='none';
+            const div = document.createElement('div'); div.className='msg bot';
             
-            const formData = new FormData();
-            selectedFiles.forEach(f => formData.append('files', f));
+            let html = `<div class="msg-info"><span>DOCUMIND v2</span></div>`;
+            
+            if(d.rewritten_query && d.rewritten_query !== qIn.dataset.lq) 
+                html += `<div class="pill">↻ ${d.rewritten_query}</div>`;
+            
+            const confC = d.confidence.label==='high'?'bg-high':(d.confidence.label==='medium'?'bg-medium':'bg-low');
+            html += `<div style="margin-bottom:8px;"><span class="conf-pill ${confC}">Confidence: ${d.confidence.label.toUpperCase()}</span></div>`;
+            
+            let ans = d.answer.replace(/\[chunk_(\d+)\]/g, '<b>[$1]</b>');
+            html += `<div class="msg-bubble">${ans.replace(/\n/g,'<br>')}</div>`;
+            
+            if(d.citations?.length) {
+                const chips = d.citations.map(c=>`<div class="cite-chip" title="${c.preview.replace(/"/g,'&quot;')}">chunk ${c.chunk_id} · ${c.source} · ${Math.round(c.relevance_score*100)}%</div>`).join('');
+                html += `<div class="citations">${chips}</div>`;
+            }
+
+            if(d.actions && d.actions.length) {
+                const actionBtns = d.actions.map(a => `<button class="action-btn" onclick="document.getElementById('q-in').value='${a.replace(/'/g, "\\'")}'; document.getElementById('send-btn').click();">${a}</button>`).join('');
+                html += `<div class="actions">${actionBtns}</div>`;
+            }
+            
+            div.innerHTML = html;
+            chatFlow.appendChild(div); scroll();
+        }
+
+        async function sendQ() {
+            const q = qIn.value.trim(); if(!q) return;
+            isBusy=true; qIn.value=''; qIn.style.height='auto'; sendBtn.disabled=true; qIn.dataset.lq=q;
+            
+            addM('user', q);
+            const typ = document.createElement('div'); typ.className='typing'; typ.innerHTML='<div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>';
+            chatFlow.appendChild(typ); scroll();
 
             try {
-                const res = await fetch(`${API_BASE}/upload-documents`, {
-                    method: 'POST', body: formData
+                const r = await fetch(API+'/query', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q, session_id:sessIn.value})});
+                const d = await r.json(); chatFlow.removeChild(typ);
+                if(!r.ok) throw new Error(d.detail);
+                
+                addBotFull(d);
+                
+                // Update metrics
+                ['faith', 'recall'].forEach(k => {
+                    const val = d.eval_metrics[k==='faith'?'answer_faithfulness':'context_recall']*100;
+                    document.getElementById('v-'+k).textContent = Math.round(val)+'%';
+                    document.getElementById('b-'+k).style.width = val+'%';
                 });
-                const data = await res.json();
-                if(!res.ok) throw new Error(data.detail || 'Upload failed');
+                document.getElementById('v-rel').textContent = d.eval_metrics.avg_relevance_score.toFixed(2);
+                document.getElementById('b-rel').style.width = Math.min(d.eval_metrics.avg_relevance_score*100, 100)+'%';
                 
-                showToast(`Successfully indexed ${data.chunks_stored} chunks`);
-                statChunks.textContent = data.total_chunks;
-                statLatency.textContent = data.latency_ms + ' ms';
+                const cBadge = document.getElementById('v-conf');
+                cBadge.textContent = d.confidence.label.toUpperCase() + ` (${Math.round(d.confidence.score*100)}%)`;
+                cBadge.className = `conf-badge ${d.confidence.label==='high'?'bg-high':(d.confidence.label==='medium'?'bg-medium':'bg-low')}`;
                 
-                fileList.innerHTML = selectedFiles.map(f => 
-                    `<div class="file-item"><span>${f.name}</span><span style="color:var(--text-muted)">indexed</span></div>`
-                ).join('');
-                selectedFiles = [];
-                indexBtn.style.display = 'none';
-            } catch (err) {
-                showToast(err.message, true);
-            } finally {
-                indexBtn.disabled = false;
-                indexBtn.textContent = 'Index Documents';
-                fileInput.value = '';
-            }
+                const esc = document.getElementById('escalate-banner');
+                if(d.confidence.should_escalate) { esc.classList.remove('hidden'); } else { esc.classList.add('hidden'); }
+                
+                // Pipeline update
+                if(d.pipeline_steps) {
+                    document.getElementById('pipe-list').innerHTML = d.pipeline_steps.map(s=>`
+                        <div class="pipe-step">
+                            <svg class="pipe-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <span>${s}</span>
+                        </div>
+                    `).join('');
+                }
+
+                loadHistory();
+
+            } catch(e) {
+                if(chatFlow.contains(typ)) chatFlow.removeChild(typ);
+                addM('bot', `Error: ${e.message}`); showToast(e.message, true);
+            } finally { isBusy=false; qIn.focus(); }
+        }
+
+        // Tabs & History
+        document.querySelectorAll('.tab').forEach(t => {
+            t.onclick = () => {
+                document.querySelectorAll('.tab, .tab-content').forEach(x => x.classList.remove('active'));
+                t.classList.add('active'); document.getElementById('tab-'+t.dataset.tab).classList.add('active');
+            };
         });
 
-        // Chat Input Auto-resize
-        queryInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
-            sendBtn.disabled = this.value.trim().length === 0;
-        });
-
-        queryInput.addEventListener('keydown', (e) => {
-            if(e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if(!sendBtn.disabled && !isProcessing) sendQuery();
-            }
-        });
-        
-        sendBtn.addEventListener('click', sendQuery);
-
-        function scrollToBottom() {
-            messagesArea.scrollTop = messagesArea.scrollHeight;
-        }
-
-        function appendMessage(role, content) {
-            emptyState.style.display = 'none';
-            const div = document.createElement('div');
-            div.className = `message ${role}`;
-            
-            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            const roleName = role === 'user' ? 'YOU' : 'DOCUMIND';
-            
-            div.innerHTML = `
-                <div class="msg-header"><span>${roleName}</span> · <span>${time}</span></div>
-                <div class="msg-bubble">${content.replace(/\n/g, '<br>')}</div>
-            `;
-            messagesArea.appendChild(div);
-            scrollToBottom();
-            return div;
-        }
-
-        function appendBotMessageFull(data) {
-            emptyState.style.display = 'none';
-            const div = document.createElement('div');
-            div.className = 'message bot';
-            
-            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            let rewriteHtml = '';
-            if(data.rewritten_query && data.rewritten_query !== queryInput.dataset.lastQ) {
-                rewriteHtml = `<div class="rewrite-badge">↻ ${data.rewritten_query}</div>`;
-            }
-            
-            let citationsHtml = '';
-            if(data.citations && data.citations.length > 0) {
-                const chips = data.citations.map(c => 
-                    `<div class="citation-chip" title="${c.preview.replace(/"/g, '&quot;')}">chunk ${c.chunk_id} · ${Math.round(c.relevance_score*100)}%</div>`
-                ).join('');
-                citationsHtml = `<div class="citations">${chips}</div>`;
-            }
-
-            // Convert [chunk_N] in answer to bolded references for better UI
-            let formattedAnswer = data.answer.replace(/\[chunk_(\d+)\]/g, '<b>[$1]</b>');
-
-            div.innerHTML = `
-                <div class="msg-header"><span>DOCUMIND</span> · <span>${time}</span></div>
-                ${rewriteHtml}
-                <div class="msg-bubble">${formattedAnswer.replace(/\n/g, '<br>')}</div>
-                ${citationsHtml}
-            `;
-            messagesArea.appendChild(div);
-            scrollToBottom();
-        }
-
-        function updateMetrics(metrics, latency) {
-            const faith = metrics.answer_faithfulness * 100;
-            const recall = metrics.context_recall * 100;
-            const rel = metrics.avg_relevance_score;
-            
-            document.getElementById('val-faith').textContent = Math.round(faith) + '%';
-            document.getElementById('bar-faith').style.width = faith + '%';
-            
-            document.getElementById('val-recall').textContent = Math.round(recall) + '%';
-            document.getElementById('bar-recall').style.width = recall + '%';
-            
-            document.getElementById('val-rel').textContent = rel.toFixed(2);
-            document.getElementById('bar-rel').style.width = Math.min(rel * 100, 100) + '%';
-            
-            document.getElementById('val-time').textContent = latency + 'ms';
-            statLatency.textContent = latency + ' ms';
-        }
-
-        async function sendQuery() {
-            const q = queryInput.value.trim();
-            if(!q) return;
-            
-            isProcessing = true;
-            queryInput.value = '';
-            queryInput.style.height = 'auto';
-            sendBtn.disabled = true;
-            queryInput.dataset.lastQ = q;
-            
-            appendMessage('user', q);
-            
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'typing-indicator';
-            typingDiv.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-            messagesArea.appendChild(typingDiv);
-            scrollToBottom();
-
-            try {
-                const res = await fetch(`${API_BASE}/query`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        question: q,
-                        session_id: sessionIdInput.value
-                    })
-                });
-                
-                const data = await res.json();
-                messagesArea.removeChild(typingDiv);
-                
-                if(!res.ok) throw new Error(data.detail || 'Query failed');
-                
-                appendBotMessageFull(data);
-                updateMetrics(data.eval_metrics, data.latency_ms);
-                loadHistory(); // Refresh right sidebar
-                
-            } catch (err) {
-                messagesArea.removeChild(typingDiv);
-                appendMessage('bot', `Error: ${err.message}`);
-                showToast(err.message, true);
-            } finally {
-                isProcessing = false;
-                sendBtn.disabled = false;
-                queryInput.focus();
-            }
-        }
-
-        // History Management
         async function loadHistory() {
             try {
-                const sid = sessionIdInput.value;
-                const res = await fetch(`${API_BASE}/chat-history/${sid}`);
-                if(!res.ok) return;
-                const data = await res.json();
-                
-                if(data.history.length === 0) {
-                    historyList.innerHTML = '<div class="hist-empty">No messages yet</div>';
-                    return;
-                }
-                
-                historyList.innerHTML = data.history.map(m => `
-                    <div class="history-item">
-                        <div class="hist-role ${m.role === 'user' ? 'you' : 'bot'}">${m.role === 'user' ? 'YOU' : 'DOCUMIND'}</div>
-                        <div class="hist-content">${m.content}</div>
-                    </div>
-                `).reverse().join(''); // Show latest at top of sidebar
-                
-            } catch (err) {
-                console.error("History load error", err);
-            }
+                const r = await fetch(API+'/chat-history/'+sessIn.value);
+                if(!r.ok) return; const d = await r.json();
+                const hL = document.getElementById('hist-list');
+                if(!d.history.length) hL.innerHTML = '<div class="text-sm text-mut" style="text-align:center; margin-top:2rem;">No history</div>';
+                else hL.innerHTML = d.history.map(m=>`<div class="hist-item"><div class="hist-role ${m.role==='user'?'you':''}">${m.role==='user'?'YOU':'BOT'}</div><div class="hist-text">${m.content}</div></div>`).reverse().join('');
+            } catch {}
         }
 
-        clearHistoryBtn.addEventListener('click', async () => {
-            if(!confirm('Clear conversation history?')) return;
+        document.getElementById('clear-btn').onclick = async () => {
+            if(!confirm('Clear session?')) return;
             try {
-                await fetch(`${API_BASE}/chat-history/${sessionIdInput.value}`, { method: 'DELETE' });
-                messagesArea.innerHTML = '';
-                emptyState.style.display = 'flex';
-                historyList.innerHTML = '<div class="hist-empty">No messages yet</div>';
-                
-                // reset metrics
-                ['faith', 'recall', 'rel'].forEach(id => {
-                    document.getElementById(`val-${id}`).textContent = id === 'rel' ? '0.00' : '0%';
-                    document.getElementById(`bar-${id}`).style.width = '0%';
+                await fetch(API+'/chat-history/'+sessIn.value, {method:'DELETE'});
+                chatFlow.innerHTML=''; empty.style.display='flex';
+                document.getElementById('pipe-list').innerHTML='<div class="text-sm text-mut" style="text-align:center; margin-top:2rem;">No queries run yet</div>';
+                ['faith','recall','rel'].forEach(k=>{
+                    document.getElementById('v-'+k).textContent = k==='rel'?'0.00':'0%';
+                    document.getElementById('b-'+k).style.width = '0%';
                 });
-                document.getElementById('val-time').textContent = '0ms';
-                
-            } catch (e) { showToast("Failed to clear history", true); }
-        });
+                document.getElementById('v-conf').textContent='N/A';
+                document.getElementById('v-conf').className='conf-badge bg-low';
+                document.getElementById('escalate-banner').classList.add('hidden');
+                loadHistory();
+            } catch { showToast('Clear failed', true); }
+        };
 
-        // Init
         loadHistory();
     </script>
 </body>

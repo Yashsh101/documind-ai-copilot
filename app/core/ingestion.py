@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import fitz
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.config import get_settings
-from app.utils.exceptions import DocumentProcessingError
+from app.utils.helpers import DocumentProcessingError
 from app.utils.logger import logger
 
 @dataclass
@@ -37,11 +37,12 @@ def chunk_text(text: str, source: str="", start_id: int=0) -> list[Chunk]:
     chunks = []
     for i,raw in enumerate(sp.split_text(text)):
         t = raw.strip()
-        if len(t)<30: continue
+        if len(t) < 30: continue
         chunks.append(Chunk(chunk_id=start_id+i, text=t, source=source,
-            metadata={"source":source,"index":i}))
-    logger.info(f"ingested {source} into {len(chunks)} chunks")
+            metadata={"source":source,"index":i,"char_count":len(t)}))
+    logger.info(f"chunked {source} into {len(chunks)} chunks")
     return chunks
 
 def ingest_pdf(file_bytes: bytes, filename: str, start_id: int=0) -> list[Chunk]:
-    return chunk_text(extract_text(file_bytes, filename), source=filename, start_id=start_id)
+    return chunk_text(extract_text(file_bytes, filename),
+        source=filename, start_id=start_id)

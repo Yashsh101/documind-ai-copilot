@@ -2,7 +2,7 @@ from __future__ import annotations
 import asyncio, numpy as np
 from openai import AsyncOpenAI, RateLimitError, APIError
 from app.config import get_settings
-from app.utils.exceptions import EmbeddingError
+from app.utils.helpers import EmbeddingError
 from app.utils.logger import logger
 
 async def get_embeddings(texts: list[str]) -> np.ndarray:
@@ -14,7 +14,8 @@ async def get_embeddings(texts: list[str]) -> np.ndarray:
     for i,batch in enumerate(batches):
         for attempt in range(1,4):
             try:
-                r = await client.embeddings.create(model=s.embedding_model, input=batch)
+                r = await client.embeddings.create(
+                    model=s.embedding_model, input=batch)
                 result.extend([e.embedding for e in r.data])
                 logger.info(f"embedded batch {i+1}/{len(batches)}")
                 break
