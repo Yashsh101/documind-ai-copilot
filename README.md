@@ -49,7 +49,9 @@ Query → LLM Rewrite → Embed → Retrieve → GPT-4o-mini → Cited Answer
 git clone https://github.com/Yashsh101/documind-ai-copilot
 cd documind-ai-copilot
 python -m venv .venv
-.venv\Scripts\activate
+# Activate virtual environment
+# On Windows: .venv\Scripts\activate
+# On Unix: source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 # Add your OPENAI_API_KEY to .env
@@ -60,13 +62,17 @@ Open http://localhost:8000 for the UI
 Open http://localhost:8000/docs for the API
 
 ## Run Tests
-`pytest tests/ -v`
+```bash
+pytest tests/ -v
+```
 
 ## Docker
-`docker compose up --build`
+```bash
+docker compose up --build
+```
 
 ## Project Structure
-```text
+```
 app/
   main.py          — FastAPI app + static file serving
   config.py        — Pydantic settings
