@@ -15,6 +15,53 @@ const tst = document.getElementById('toast');
 let activeDocumentIds = [];
 let isBusy = false;
 let sessionHistory = [];
+const fileBlobs = {}; // Quick local previews
+
+// Sound logic
+function playPopSound() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.08);
+    } catch(e) { }
+}
+
+// Theme Logic
+const themeToggle = document.getElementById('theme-toggle');
+const moonIcon = document.getElementById('moon-icon');
+const sunIcon = document.getElementById('sun-icon');
+
+function setTheme(isLight) {
+    if(isLight) {
+        document.documentElement.setAttribute('data-theme', 'light');
+        if(moonIcon) moonIcon.style.display = 'block';
+        if(sunIcon) sunIcon.style.display = 'none';
+        localStorage.setItem('theme', 'light');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        if(moonIcon) moonIcon.style.display = 'none';
+        if(sunIcon) sunIcon.style.display = 'block';
+        localStorage.setItem('theme', 'dark');
+    }
+}
+if(localStorage.getItem('theme') === 'light') setTheme(true);
+if(themeToggle) {
+    themeToggle.onclick = () => {
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        setTheme(!isLight);
+    };
+}
+
 
 const showToast = (txt, isErr=false) => { 
     tstMsg.textContent = txt; 
@@ -89,11 +136,40 @@ function procFiles(flist) {
     // Store files globally for upload click
     window._pendingFiles = files;
     
+    files.forEach(f => {
+        if(!fileBlobs[f.name]) fileBlobs[f.name] = URL.createObjectURL(f);
+    });
+    
     fileList.innerHTML = files.map(f=>`
-        <div class="file-item animate-fade">
+        <div class="file-item animate-fade" onclick="openPdfModal('${f.name}')">
             <div class="file-item-top"><span>${f.name}</span><span style="color:var(--text-sec)">Queued</span></div>
         </div>
     `).join('');
+}
+
+// PDF Modal Logic
+const pdfModal = document.getElementById('pdf-modal');
+const pdfViewer = document.getElementById('pdf-viewer');
+const pdfModalTitle = document.getElementById('pdf-modal-title');
+const closeModalBtn = document.getElementById('close-modal-btn');
+
+window.openPdfModal = (name) => {
+    if(fileBlobs[name] && pdfModal) {
+        pdfModalTitle.textContent = name;
+        pdfViewer.src = fileBlobs[name];
+        pdfModal.showModal();
+    }
+};
+if(closeModalBtn) {
+    closeModalBtn.onclick = () => {
+        pdfModal.close();
+        setTimeout(() => pdfViewer.src = '', 300);
+    };
+}
+if(pdfModal) {
+    pdfModal.addEventListener('click', (e) => {
+        if (e.target === pdfModal) closeModalBtn.onclick();
+    });
 }
 
 idxBtn.onclick = async () => {
@@ -112,7 +188,7 @@ idxBtn.onclick = async () => {
         document.getElementById('stat-docs').textContent = activeDocumentIds.length;
         
         fileList.innerHTML = window._pendingFiles.map((f, i) => `
-            <div class="file-item">
+            <div class="file-item" onclick="openPdfModal('${f.name}')">
                 <div class="file-item-top"><span>${f.name}</span><span style="color:var(--c-info)">Ready</span></div>
                 <div class="file-item-id">ID: ${d.document_ids[i]}</div>
             </div>
@@ -241,12 +317,31 @@ async function sendQ() {
         const ans = d.answer || "No answer provided.";
         typeWriter(document.getElementById(`ans-typing`), ans, () => {
             document.getElementById(`ans-typing`).removeAttribute('id'); // cleanup id
+            
+            // Add copy button
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.title = "Copy to clipboard";
+            copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(ans);
+                copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="var(--c-info)" stroke-width="2" width="14" height="14"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                setTimeout(() => {
+                    copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                }, 2000);
+            };
+            div.querySelector('.msg-bubble').appendChild(copyBtn);
+
             if(citesHtml) {
                 const extras = document.createElement('div');
                 extras.innerHTML = citesHtml;
                 div.appendChild(extras);
-                scrollChat();
             }
+            
+            div.classList.add('pulse-glow');
+            playPopSound();
+            scrollChat();
+            
             qIn.disabled = false; qIn.focus();
             
             sessionHistory.push({ role: 'bot', content: ans });
@@ -289,3 +384,60 @@ document.getElementById('clear-btn').onclick = () => {
     empty.style.display = 'flex';
     renderHistory();
 };
+
+const dlBtn = document.getElementById('download-pdf-btn');
+if(dlBtn) {
+    dlBtn.onclick = () => {
+        if(sessionHistory.length === 0) return showToast('No chat history to export.', true);
+        
+        const container = document.createElement('div');
+        container.style.padding = '40px';
+        container.style.fontFamily = 'Inter, sans-serif';
+        container.style.color = '#111827';
+        container.style.backgroundColor = '#FFFFFF';
+        
+        let html = `
+            <div style="margin-bottom: 24px;">
+                <h2 style="margin: 0 0 8px 0; font-weight: 600; font-size: 24px; color: #111827;">DocuMind Copilot Session</h2>
+                <div style="font-size: 12px; color: #6B7280; font-family: 'JetBrains Mono', monospace;">
+                    Exported: ${new Date().toLocaleString()}
+                </div>
+            </div>
+            <div style="border-bottom: 1px solid #E5E7EB; margin-bottom: 32px;"></div>
+        `;
+        
+        sessionHistory.forEach(m => {
+            const isUser = m.role === 'user';
+            html += `
+                <div style="margin-bottom: 28px; padding: 16px; background-color: ${isUser?'#F9FAFB':'#FFFFFF'}; border: 1px solid ${isUser?'#E5E7EB':'transparent'}; border-radius: 8px;">
+                    <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; color: ${isUser?'#4338CA':'#6B7280'}; margin-bottom: 8px;">
+                        ${isUser ? 'You' : 'DocuMind'}
+                    </div>
+                    <div style="font-size: 14px; line-height: 1.6; color: #111827;">
+                        ${m.content.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        
+        dlBtn.disabled = true;
+        dlBtn.innerHTML = 'Exporting...';
+        
+        html2pdf().from(container).set({
+            margin: 10,
+            filename: 'DocuMind_Session.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).save().then(() => {
+            showToast('PDF Exported Successfully');
+            dlBtn.disabled = false;
+            dlBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export`;
+        }).catch(err => {
+            showToast('Error exporting PDF', true);
+            dlBtn.disabled = false;
+            dlBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export`;
+        });
+    };
+}
