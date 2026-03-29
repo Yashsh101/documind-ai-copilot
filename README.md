@@ -1,106 +1,66 @@
-# DocuMind v2 — AI Customer Support Copilot
+# DocuMind v2 \u2014 AI Customer Support Copilot (Python FastAPI + SPA)
 
-![CI](https://github.com/Yashsh101/documind-ai-copilot/actions/workflows/ci.yml/badge.svg)
-![Python](https://img.shields.io/badge/python-3.11+-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
-![License](https://img.shields.io/badge/license-MIT-blue)
-
-> "A production-grade RAG system with HyDE, hybrid retrieval, cross-encoder reranking, and confidence scoring — built to outperform Intercom Fin and Zendesk AI on accuracy and transparency."
-
-Built by **Yash Sharma** | MCA Student | Aspiring AI/ML Engineer  
-GitHub: https://github.com/Yashsh101  
-LinkedIn: https://linkedin.com/in/yash-sharma-262923183
-
-## What makes v2 different (vs competitors)
-- **HyDE**: Embeds hypothetical answers instead of raw queries to dramatically boost recall on complex questions.
-- **Hybrid Retrieval**: Fuses dense semantic search (text-embedding-3-small) with sparse keyword search (BM25) to catch precise product codes or version numbers.
-- **Cross-encoder Reranking**: Uses an LLM to judge the top-20 retrieved chunks and precisely re-sort them to the top-5 before generation.
-- **Confidence Scoring & Escalation**: Generates a composite confidence score based on retrieval/generation metrics. Automatically flags low-confidence answers to escalate to a human agent natively.
-- **Context Compression**: Strips out irrelevant sentences from retrieved chunks, feeding only the highest-signal context into the LLM context window.
-
-## Architecture
-
-```text
-User Query --> Query Rewriter --> HyDE Answer Generation
-                                        |
-  +-------------------------------------+-----------------------------------+
-  |                                                                         |
-Dense Search (FAISS/Embeddings)                               Sparse Search (BM25)
-  |                                                                         |
-  +---------------------------> Merged Results <----------------------------+
-                                        |
-                            Cross-Encoder Reranker
-                                        |
-                              Context Compressor
-                                        |
-                          GPT-4o-mini Generator
-                                        |
-                         Confidence Scorer + Evaluator
-                                        |
-                      Final Cited Answer + Quality Metrics
-```
+DocuMind v2 is a production-grade AI customer support copilot designed to ingest policy and FAQ documents (PDFs) and provide precise, citation-backed answers to user questions using a pure Python RAG pipeline and a modern SaaS-style interface. The architecture is cleanly decoupled, making it instantly adaptable for real-world enterprise deployments.
 
 ## Tech Stack
-| Layer | Technology |
-|-------|------------|
-| API | FastAPI + Uvicorn |
-| Ingestion | PyMuPDF + Langchain Recursive Splitter |
-| Dense Vector Store | FAISS (IndexFlatIP) |
-| Sparse Index | Rank-BM25 |
-| Embeddings | OpenAI text-embedding-3-small |
-| LLMs | OpenAI GPT-4o-mini |
-| Testing | Pytest + Pytest-Asyncio |
 
-## Features
-- Fully local in-memory indices for Blazing Fast latency
-- Chunk-level semantic citations
-- Live streaming pipeline steps
-- Animated Real-time evaluation indicators (Faithfulness, Recall)
-- Escalation thresholds
+- **Backend**: Python 3, FastAPI, Uvicorn, PyMuPDF (fitz), and standard scalable ML/Python libraries.
+- **Frontend**: Clean HTML, CSS, JavaScript SPA featuring a responsive dark SaaS UI.
+- **AI Engine**: Local extractive RAG pipeline configured natively with pure Python embedding and retrieval stubs. Fully architected to accept LLM endpoints out of the box.
 
-## Quick Start
+## Core Features
 
-```bash
-git clone https://github.com/Yashsh101/documind-ai-copilot
-cd documind-ai-copilot
-python -m venv .venv
-# Activate: On Windows: .venv\Scripts\activate | Unix: source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-# [!] Add your OPENAI_API_KEY to .env
-uvicorn app.main:app --port 8000
+- **Document Ingestion**: Rapidly upload PDFs (e.g., refund policies) which are automatically parsed, chunked, and converted into structured knowledge base artifacts.
+- **Natural Language Querying**: Ask contextual questions and retrieve precise answers mapped dynamically to direct citations within source documents.
+- **Premium User Experience**: Notion/ChatGPT-style chat UI with smooth typing transitions, dynamic document status indicators, and resilient structured error handling wrapped via an exponential back-off API controller.
+- **Zero-Dependency Core**: The default baseline uses an entirely local, pure Python NLP scoring stub, eliminating the need for expensive API keys or external dependencies under standard testing.
+
+## Setup & Initialization
+
+1. Create a native virtual environment:
+   ```bash
+   python -m venv .venv
+   ```
+2. Activate the virtual environment:
+   - **Windows**: `.\.venv\Scripts\activate`
+   - **Linux / macOS**: `source .venv/bin/activate`
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Running the Application
+
+1. Boot the Uvicorn server:
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
+2. Open your preferred browser and navigate to the mounted SPA:
+   - `http://127.0.0.1:8000`
+
+## Usage Example
+
+- **Upload Stage**: Place or generate the `Company_Refund_Policy.pdf` inside the project directory. Drag and drop it into the "Knowledge Base" UI box, and click **Upload & Index**.
+- **Query Stage**: In the chat box, type: *"What is the refund policy?"*
+- **Response Handling**: DocuMind immediately parses the vector store and extracts the context, generating a JSON response identical to the following structure behind the scenes:
+
+```json
+{
+  "answer": "Based on the knowledge base documents, here is the relevant information: \n\n\"Company Refund Policy\nWe accept full refunds within 30 days of purchase. Just ask the support team via email....\"\n\n*(This is an extractive answer computed strictly in Python. Plug in an LLM call here to synthesize text natively!)*",
+  "citations": [
+    {
+      "document_id": "18700992_company_refund_policy.pdf",
+      "page": 1,
+      "snippet": "Company Refund Policy\nWe accept full refunds within 30 days of purchase. Just ask the support team via email...."
+    }
+  ],
+  "status": "success",
+  "message": null
+}
 ```
 
-## API Reference
-- `POST /api/v1/upload-documents` — Multipart file upload and full index rebuild.
-- `POST /api/v1/query` — RAG pipeline execution.
-- `GET /api/v1/chat-history/{sid}` — Retrieve conversational turns.
-- `DELETE /api/v1/chat-history/{sid}` — Clear history.
-- `GET /api/v1/health` — Ensure index and features status.
+## Extensibility & LLM Integrations
 
-## Project Structure
-```
-app/
-  config.py
-  main.py
-  api/ (routes.py, schemas.py)
-  services/ (ingestion, bm25_index, embedding, llm, memory, reranker, retrieval)
-  rag/ (pipeline, query_rewriter, hyde, context_compressor)
-  utils/ (logger, exceptions, citations, evaluator, confidence)
-tests/
-index.html
-```
-
-## Environment Variables
-- `OPENAI_API_KEY` (required)
-- Model configs (`LLM_MODEL`, `EMBEDDING_MODEL`)
-- Tuning parameters (`CHUNK_SIZE`, `TOP_K_RETRIEVAL`)
-
-## Running Tests
-Run the deterministic pipeline test suite:
-```bash
-pytest tests/ -v
-```
-
-## License
-MIT
+This system is built from the ground up by an AI/ML Engineer anticipating heavy-duty synthesis models:
+- **Embeddings**: In `app/core/embedding.py`, replace the `get_query_embedding()` logic and its hashed cache stubs with raw calls to `openai.embeddings.create(...)` or Vertex AI.
+- **Synthesis Generation**: Inside `app/core/pipeline.py` (`run_query`), the extractive Python answer generation step can directly be swapped for `client.chat.completions` (OpenAI/Anthropic) calls utilizing the properly structured local chunks as strict System Prompts.

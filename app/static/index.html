@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuMind v2 \u2014 AI Customer Support Copilot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div id="toast" class="toast hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span id="toast-msg"></span>
+    </div>
+
+    <!-- Left Panel: Documents & Stats -->
+    <aside class="panel-left">
+        <div class="brand">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+            DocuMind <span class="brand-badge">v2</span>
+        </div>
+
+        <div class="section-lbl">Knowledge Base</div>
+        <div class="upload-box" id="drop-zone">
+            <input type="file" id="file-input" multiple accept=".pdf">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <div style="font-size:13px; font-weight:500; margin-bottom:4px; color:var(--text-pri)">Upload PDFs</div>
+            <div class="text-xs text-sec">Drag & drop here</div>
+        </div>
+        <button id="index-btn" class="btn-primary" style="display: none;">Upload & Index</button>
+        <div id="file-list" class="file-list"></div>
+
+        <div class="stats-grid" style="margin-top: 24px;">
+            <div class="stat-card">
+                <div class="stat-lbl">Backend</div>
+                <div class="stat-val">
+                    <div id="stat-dot-left" class="dot err"></div> <span id="stat-txt-left">Offline</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-lbl">Active Docs</div>
+                <div class="stat-val" id="stat-docs">0</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Center/Main Panel: Chat -->
+    <main class="panel-center">
+        <header class="main-header">
+            <div class="session-ctrl">
+                <span class="text-xs text-sec font-mono uppercase">Session ID</span>
+                <input type="text" id="sess-in" class="session-in" value="default" readonly title="Session management active">
+            </div>
+            <div class="flex items-center gap-2 text-xs font-medium text-sec" title="Checks if backend is running">
+                <div id="stat-dot" class="dot err"></div>
+                <span id="stat-txt">Backend Offline</span>
+            </div>
+        </header>
+
+        <div id="chat-area" class="chat-area">
+            <div id="empty" class="empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <h2>Production RAG Copilot</h2>
+                <p>Python-driven architecture with native embeddings caching. Upload a document to begin.</p>
+            </div>
+        </div>
+
+        <div class="input-bar">
+            <div class="input-wrap">
+                <textarea id="q-in" placeholder="Ask a question..." rows="1" disabled></textarea>
+                <button id="send-btn" class="send-btn" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+            <div class="text-xs text-sec" style="text-align: center; margin-top: 8px;">
+                Extractive Generation via TF-IDF Python Backend Stub (LLM Ready)
+            </div>
+        </div>
+    </main>
+
+    <!-- Right Panel: Insights & Log -->
+    <aside class="panel-right">
+        <div class="tabs">
+            <div class="tab active" data-tab="history">Session History</div>
+        </div>
+        
+        <div id="tab-history" class="tab-content active">
+            <div class="flex justify-between items-center" style="margin-bottom: var(--sp-3);">
+                <span class="section-lbl" style="margin:0;">Chat Log</span>
+                <button id="clear-btn" class="text-xs text-sec" style="padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px;">Clear</button>
+            </div>
+            <div id="hist-list">
+                <div class="text-sm text-sec" style="text-align:center; padding-top:2rem;">No conversation history.</div>
+            </div>
+        </div>
+    </aside>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

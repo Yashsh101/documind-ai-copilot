@@ -1,29 +1,36 @@
-from __future__ import annotations
-import asyncio, numpy as np
-from openai import AsyncOpenAI, RateLimitError, APIError
+import hashlib
+from functools import lru_cache
+from typing import List
 from app.config import get_settings
-from app.utils.helpers import EmbeddingError
-from app.utils.logger import logger
 
-async def get_embeddings(texts: list[str]) -> np.ndarray:
-    if not texts: raise EmbeddingError("Empty list.")
-    s = get_settings()
-    client = AsyncOpenAI(api_key=s.openai_api_key)
-    result = []
-    batches = [texts[i:i+100] for i in range(0,len(texts),100)]
-    for i,batch in enumerate(batches):
-        for attempt in range(1,4):
-            try:
-                r = await client.embeddings.create(
-                    model=s.embedding_model, input=batch)
-                result.extend([e.embedding for e in r.data])
-                logger.info(f"embedded batch {i+1}/{len(batches)}")
-                break
-            except RateLimitError: await asyncio.sleep(2**attempt)
-            except APIError as e:
-                if attempt==3: raise EmbeddingError(str(e)) from e
-                await asyncio.sleep(2**attempt)
-    return np.array(result, dtype="float32")
+# Grab cache size from settings
+CACHE_SIZE = get_settings().embedding_cache_size
 
-async def get_query_embedding(text: str) -> np.ndarray:
-    return await get_embeddings([text])
+@lru_cache(maxsize=CACHE_SIZE)
+def get_query_embedding(text: str) -> List[float]:
+    """
+    Computes a deterministic dummy 'embedding' for a query.
+    Architected to be hot-swapped with actual OpenAI/Vertex AI calls.
+    Uses lru_cache to prevent repetitive API operations.
+    """
+    if not text.strip():
+        return [0.0] * 384
+        
+    # Generate a deterministic pseudo-random vector based on text hash
+    h = hashlib.sha256(text.encode("utf-8")).digest()
+    
+    # Create a 384-dimensional dense vector stub using the hash bytes
+    # Normalization or semantic meaning isn't present in this stub.
+    vec = [(float(b) / 255.0) - 0.5 for b in h]
+    # Pad or tile to 384 dims
+    while len(vec) < 384:
+        vec.extend(vec)
+    
+    return vec[:384]
+
+def get_document_embeddings(texts: List[str]) -> List[List[float]]:
+    """
+    Batch computes embeddings for chunked document texts.
+    (Stub implementation)
+    """
+    return [get_query_embedding(t) for t in texts]

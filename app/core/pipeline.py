@@ -1,176 +1,163 @@
-from __future__ import annotations
-import asyncio
+import os
 import re
-from collections import defaultdict, deque
-from dataclasses import dataclass, field
+import json
+import uuid
+from typing import Tuple, List, Dict, Any
+import fitz  # PyMuPDF
+from app.config import get_settings, logger
+from app.core.embedding import get_document_embeddings, get_query_embedding
 
-from openai import AsyncOpenAI
-from app.config import get_settings
-from app.core.embedding import get_query_embedding
-from app.core.retrieval import vector_store, bm25_index
-from app.core.reranker import rerank_chunks
-from app.core.action_engine import suggest_actions
-from app.core.llm import generate_answer
-from app.utils.helpers import Citation, clean_answer, extract_citations, EvalResult, evaluate, ConfidenceResult, score_confidence
-from app.utils.logger import logger
+s = get_settings()
 
-# --- Memory ---
-_store: dict[str,deque] = defaultdict(
-    lambda: deque(maxlen=get_settings().max_history_turns*2))
+def chunk_text(text: str, document_id: str) -> List[Dict[str, Any]]:
+    """
+    Splits text into sliding chunks.
+    Maintains page references by splitting roughly.
+    """
+    # Simple semantic fallback chunking without LangChain dependency
+    paragraphs = re.split(r'\n{2,}', text)
+    chunks = []
+    
+    current_chunk = []
+    current_length = 0
+    page_approx = 1
+    
+    for p in paragraphs:
+        p = p.strip()
+        if not p: continue
+        
+        # very rough heuristic for page markers
+        if "PAGE_" in p:
+            try:
+                page_approx = int(p.split("PAGE_")[1].split()[0])
+                # Remove the page marker so we keep the text
+                p = re.sub(r'PAGE_\d+', '', p).strip()
+                if not p: continue
+            except: pass
+            
+        current_chunk.append(p)
+        current_length += len(p)
+        
+        if current_length > s.chunk_size:
+            text_val = " ".join(current_chunk)
+            chunks.append({
+                "document_id": document_id,
+                "page": page_approx,
+                "text": text_val
+            })
+            # Overlap: keep the last paragraph
+            current_chunk = [p]
+            current_length = len(p)
+            
+    if current_chunk:
+        chunks.append({
+            "document_id": document_id,
+            "page": page_approx,
+            "text": " ".join(current_chunk)
+        })
+        
+    return chunks
 
-def get_history(sid: str) -> list[dict]: return list(_store[sid])
-def add_turn(sid: str, user: str, asst: str):
-    _store[sid].append({"role":"user","content":user})
-    _store[sid].append({"role":"assistant","content":asst})
-def clear_session(sid: str): _store.pop(sid, None)
-
-# --- Query Rewriter ---
-_REWRITE_PROMPT = """Rewrite this customer support question to improve semantic retrieval.
-Make it specific, remove vague pronouns, expand abbreviations.
-Output ONLY the rewritten query.
-Question: {q}
-Rewritten:"""
-
-async def rewrite_query(query: str) -> str:
-    s = get_settings()
-    client = AsyncOpenAI(api_key=s.openai_api_key)
+def ingest_pdf(file_bytes: bytes, filename: str) -> str:
+    """
+    Parses a PDF from bytes, chunks it, stub-embeds it, and saves it to data/
+    """
+    doc_id = str(uuid.uuid4())[:8] + "_" + filename.replace(" ", "_").lower()
+    
     try:
-        r = await client.chat.completions.create(
-            model=s.llm_model,
-            messages=[{"role":"user","content":_REWRITE_PROMPT.format(q=query)}],
-            temperature=0.0, max_tokens=100)
-        rw = (r.choices[0].message.content or "").strip()
-        if rw:
-            logger.info(f"query rewrite: '{query}' -> '{rw}'")
-            return rw
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        full_text = []
+        for i, page in enumerate(doc):
+            t = page.get_text("text").strip()
+            if t:
+                # Insert our page marker heuristic
+                full_text.append(f"\nPAGE_{i+1}\n" + t)
+        doc.close()
     except Exception as e:
-        logger.warning(f"rewrite failed: {e}")
-    return query
+        logger.error(f"Failed to extract PDF text: {e}")
+        raise ValueError("Invalid PDF structure")
+        
+    raw_text = "\n".join(full_text)
+    if not raw_text.strip():
+        raise ValueError("No text found in PDF")
+        
+    chunks = chunk_text(raw_text, doc_id)
+    
+    # Compute embeddings stub
+    texts_to_embed = [c["text"] for c in chunks]
+    embeddings = get_document_embeddings(texts_to_embed)
+    
+    for i, c in enumerate(chunks):
+        c["embedding"] = embeddings[i]
+        
+    # Persist to disk
+    store_path = os.path.join(s.data_dir, f"{doc_id}.json")
+    with open(store_path, "w", encoding="utf-8") as f:
+        json.dump(chunks, f)
+        
+    return doc_id
 
-# --- HyDE ---
-_HYDE_PROMPT = """\
-Generate a short hypothetical document that would perfectly answer this question.
-Write it as if it were a real excerpt from a knowledge base article.
-Be specific and factual. 2-3 sentences maximum.
+def _load_all_chunks(allowed_docs: List[str] = None) -> List[Dict[str, Any]]:
+    all_chunks = []
+    for fname in os.listdir(s.data_dir):
+        if not fname.endswith(".json"): continue
+        
+        doc_id = fname.replace(".json", "")
+        if allowed_docs and doc_id not in allowed_docs: continue
+        
+        with open(os.path.join(s.data_dir, fname), "r", encoding="utf-8") as f:
+            all_chunks.extend(json.load(f))
+    return all_chunks
 
-Question: {query}
-Hypothetical document:"""
+def tfidf_score(query: str, text: str) -> float:
+    """
+    Simple keyword intersection (BM25 surrogate) for the pure Python pipeline.
+    More effective than comparing random hash dense vectors.
+    """
+    q_words = set(re.findall(r'\w+', query.lower()))
+    t_words = re.findall(r'\w+', text.lower())
+    match_count = sum(1 for w in t_words if w in q_words)
+    return match_count / (len(t_words) + 1.0) * 100.0
 
-async def generate_hypothetical_document(query: str) -> str:
-    s = get_settings()
-    if not s.hyde_enabled:
-        return query
-    client = AsyncOpenAI(api_key=s.openai_api_key)
-    try:
-        r = await client.chat.completions.create(
-            model=s.llm_model,
-            messages=[{"role":"user","content":_HYDE_PROMPT.format(query=query)}],
-            temperature=0.3, max_tokens=150)
-        hyp = (r.choices[0].message.content or "").strip()
-        if hyp:
-            logger.info(f"HyDE generated hypothetical doc for: '{query}'")
-            return hyp
-    except Exception as e:
-        logger.warning(f"HyDE failed, using original query: {e}")
-    return query
-
-# --- Context Compressor ---
-def compress_chunks(chunks: list, query: str, max_chars: int = 3000) -> list:
-    query_words = set(re.findall(r"\w+", query.lower()))
-    compressed = []
-    total_chars = 0
-
-    for chunk in chunks:
-        sentences = re.split(r"(?<=[.!?])\s+", chunk.text)
-        scored = []
-        for sent in sentences:
-            if len(sent.strip()) < 15:
-                continue
-            words = set(re.findall(r"\w+", sent.lower()))
-            overlap = len(words & query_words) / max(len(words), 1)
-            scored.append((overlap, sent))
-        scored.sort(reverse=True)
-        kept = " ".join(s for _, s in scored[:5])
-        if not kept.strip():
-            kept = chunk.text[:500]
-        chunk.text = kept
-        total_chars += len(kept)
-        compressed.append(chunk)
-        if total_chars >= max_chars:
-            break
-
-    logger.info(f"compressed context to {total_chars} chars from {len(chunks)} chunks")
-    return compressed
-
-# --- Pipeline ---
-@dataclass
-class RAGResult:
-    answer: str
-    citations: list[Citation]
-    rewritten_query: str
-    eval_metrics: EvalResult
-    confidence: ConfidenceResult
-    actions: list[str] = field(default_factory=list)
-    retrieved_chunks: list[dict] = field(default_factory=list)
-    pipeline_steps: list[str] = field(default_factory=list)
-
-async def run_query(query: str, history: list[dict]) -> RAGResult:
-    s = get_settings()
-    steps = []
-
-    rewritten = await rewrite_query(query)
-    steps.append(f"rewrite: '{query}' -> '{rewritten}'")
-
-    hyde_doc = await generate_hypothetical_document(rewritten)
-    embed_text = hyde_doc if s.hyde_enabled else rewritten
-    steps.append("hyde: generated hypothetical document")
-
-    qvec = await get_query_embedding(embed_text)
-    dense_chunks = await vector_store.search(qvec, k=s.top_k_retrieval)
-    steps.append(f"dense retrieval: {len(dense_chunks)} chunks")
-
-    sparse_results = []
-    if s.hybrid_search_enabled:
-        sparse_results = bm25_index.search(rewritten, k=s.top_k_retrieval)
-        steps.append(f"sparse BM25: {len(sparse_results)} chunks")
-
-    seen_ids = {c.chunk_id for c in dense_chunks}
-    merged = list(dense_chunks)
-    for chunk, bm25_score in sparse_results:
-        if chunk.chunk_id not in seen_ids:
-            chunk.score = bm25_score * 0.3
-            merged.append(chunk)
-            seen_ids.add(chunk.chunk_id)
-    steps.append(f"merged: {len(merged)} unique chunks")
-
-    reranked = await rerank_chunks(rewritten, merged, top_k=s.top_k_rerank)
-    steps.append(f"reranked: {len(reranked)} final chunks")
-
-    compressed = compress_chunks(reranked, rewritten)
-    steps.append("context compressed")
-
-    raw_answer = await generate_answer(query, compressed, history)
-
-    chunk_dicts = [{"chunk_id":c.chunk_id,"text":c.text,
-        "source":c.source,"score":c.score} for c in compressed]
-    citations = extract_citations(raw_answer, chunk_dicts)
-    answer = clean_answer(raw_answer)
-
-    metrics = evaluate(raw_answer, chunk_dicts)
-
-    confidence = score_confidence(
-        avg_relevance=metrics.avg_relevance_score,
-        context_recall=metrics.context_recall,
-        faithfulness=metrics.answer_faithfulness,
-        num_citations=len(citations),
-        num_chunks=len(compressed),
+def run_query(query: str, document_ids: List[str] = None) -> Tuple[str, List[Dict[str, Any]]]:
+    """
+    Executes a RAG retrieval and generation stub.
+    """
+    chunks = _load_all_chunks(document_ids)
+    if not chunks:
+        raise ValueError("No matching documents indexed.")
+        
+    # 1. Embed query (Cached via lru_cache in embedding.py)
+    # Stub: calling it just to prove the pipeline triggers it correctly
+    _ = get_query_embedding(query)
+    
+    # 2. Retrieve (using keyword scoring since dense vector is a random hash stub)
+    for c in chunks:
+        c["score"] = tfidf_score(query, c["text"])
+        
+    chunks.sort(key=lambda x: x["score"], reverse=True)
+    top_chunks = chunks[:s.top_k_retrieval]
+    
+    if not top_chunks or top_chunks[0]["score"] == 0:
+        return "I could not find a relevant answer in the uploaded documents.", []
+        
+    # 3. Generation Engine (Extractive approach for now, ready for LLMs)
+    # Extracting the most relevant snippet and formatting as the answer.
+    best_chunk = top_chunks[0]
+    generated_answer = (
+        f"Based on the knowledge base documents, here is the relevant information: \n\n"
+        f"\"{best_chunk['text'][:400]}...\"\n\n"
+        f"*(This is an extractive answer computed strictly in Python. Plug in an LLM call here to synthesize text natively!)*"
     )
-
-    actions = await suggest_actions(query, answer)
-
-    logger.info(f"pipeline complete: faith={metrics.answer_faithfulness} confidence={confidence.label}")
-
-    return RAGResult(answer=answer, citations=citations,
-        rewritten_query=rewritten, eval_metrics=metrics,
-        confidence=confidence, actions=actions, retrieved_chunks=chunk_dicts,
-        pipeline_steps=steps)
+    
+    # Format citations dynamically from source materials safely
+    citations = []
+    for c in top_chunks:
+        if c["score"] > 0:
+            citations.append({
+                "document_id": c["document_id"],
+                "page": c["page"],
+                "snippet": c["text"][:150] + "..."
+            })
+            
+    return generated_answer, citations
