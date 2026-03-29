@@ -1,4 +1,4 @@
-# DocuMind v2 \u2014 AI Customer Support Copilot (Python FastAPI + SPA)
+# DocuMind \ AI Customer Support Copilot (Python FastAPI + SPA)
 
 DocuMind v2 is a production-grade AI customer support copilot designed to ingest policy and FAQ documents (PDFs) and provide precise, citation-backed answers to user questions using a pure Python RAG pipeline and a modern SaaS-style interface. The architecture is cleanly decoupled, making it instantly adaptable for real-world enterprise deployments.
 
