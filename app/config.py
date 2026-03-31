@@ -7,9 +7,6 @@ import logging
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
-from dotenv import load_dotenv
-
-load_dotenv(override=True)
 
 
 class _JSONFormatter(logging.Formatter):
@@ -64,9 +61,10 @@ class Settings(BaseSettings):
     vector_weight: float = 0.65
     rerank_enabled: bool = True
 
-    # Ollama / LLM
-    ollama_base_url: str = Field(default="http://localhost:11434")
-    llm_model: str = "llama3"
+    # OpenAI / LLM
+    llm_model: str = "gpt-4o-mini"
+    openai_chat_model: str = "gpt-4o-mini"
+    openai_embedding_model: str = "text-embedding-3-small"
     llm_temperature: float = 0.15
 
     # Memory

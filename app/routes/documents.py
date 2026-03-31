@@ -13,6 +13,7 @@ s = get_settings()
 
 
 @router.post("/upload")
+@router.post("/upload-documents")
 async def upload_documents(files: List[UploadFile] = File(...)):
     """
     Upload and index PDF documents into the knowledge base.

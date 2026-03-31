@@ -41,6 +41,7 @@ async def query_endpoint(req: QueryRequest):
                 ActionItem(**a) for a in extras.get("suggested_actions", [])
             ],
             latency_ms=extras.get("latency_ms", 0.0),
+            eval_metrics=extras.get("eval_metrics", {}),
         )
     except Exception as e:
         logger.error(f"Query pipeline failed: {e}", exc_info=True)

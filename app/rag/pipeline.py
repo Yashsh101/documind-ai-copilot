@@ -127,6 +127,11 @@ def run_pipeline(
         "confidence_score": confidence,
         "suggested_actions": actions,
         "latency_ms": total_latency,
+        "eval_metrics": {
+            "retrieved_chunks": len(top_chunks),
+            "citation_count": len(citations),
+            "rerank_enabled": s.rerank_enabled,
+        },
     }
 
     result = (answer, citations, extras)

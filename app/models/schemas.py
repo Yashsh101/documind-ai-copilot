@@ -1,7 +1,7 @@
 """
 DocuMind v3 — Pydantic Request/Response Schemas
 """
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 
@@ -37,6 +37,7 @@ class QueryResponse(BaseModel):
     confidence_score: Optional[float] = 0.0
     suggested_actions: Optional[List[ActionItem]] = []
     latency_ms: Optional[float] = 0.0
+    eval_metrics: Optional[Dict[str, Any]] = {}
 
 
 class StreamChunk(BaseModel):

@@ -57,7 +57,7 @@ def hybrid_search(
     # === Dense Vector Retrieval ===
     query_embedding = get_query_embedding(query)
     vector_scores = np.array([
-        cosine_similarity(query_embedding, c.get("embedding", [0.0] * 4096))
+        cosine_similarity(query_embedding, c.get("embedding", [0.0] * len(query_embedding)))
         for c in chunks
     ], dtype=np.float32)
 

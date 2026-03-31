@@ -1,52 +1,55 @@
 """
 DocuMind v3 — Embedding Service
 
-Generates dense vector embeddings via Ollama with in-memory caching.
+Generates dense vector embeddings via OpenAI with in-memory caching.
 """
-import httpx
-from typing import List
+import os
+from typing import List, Optional
+from openai import OpenAI
 from app.config import get_settings, logger
 from app.core.cache import embedding_cache
 
 s = get_settings()
 
-_EMBEDDING_DIM = 4096  # Llama 3 embedding dimension
+
+def _get_openai_client() -> Optional[OpenAI]:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    return OpenAI(api_key=api_key)
+
+_EMBEDDING_DIM = 1536
 _ZERO_VECTOR = [0.0] * _EMBEDDING_DIM
 
 
 def get_query_embedding(text: str) -> List[float]:
     """
     Get embedding for a single query text. Uses TTL cache to avoid
-    redundant Ollama API calls.
+    redundant OpenAI API calls.
     """
     if not text or not text.strip():
         return _ZERO_VECTOR
 
-    # Check cache first
     cached = embedding_cache.get(text)
     if cached is not None:
         return cached
 
-    url = f"{s.ollama_base_url}/api/embeddings"
-    payload = {"model": s.llm_model, "prompt": text}
+    client = _get_openai_client()
+    if client is None:
+        logger.warning("OPENAI_API_KEY not set; returning zero embedding.")
+        return _ZERO_VECTOR
 
-    for attempt in range(2):
-        try:
-            with httpx.Client(timeout=60.0) as client:
-                resp = client.post(url, json=payload)
-                resp.raise_for_status()
-                data = resp.json()
-                embedding = data.get("embedding", _ZERO_VECTOR)
-                embedding_cache.set(text, embedding)
-                return embedding
-        except httpx.TimeoutException:
-            logger.warning(f"Embedding timeout attempt {attempt + 1}")
-        except httpx.RequestError as e:
-            logger.error(f"Embedding connection error: {e}")
-        except Exception as e:
-            logger.error(f"Embedding failed attempt {attempt + 1}: {e}")
-
-    return _ZERO_VECTOR
+    try:
+        response = client.embeddings.create(
+            model=s.openai_embedding_model,
+            input=text,
+        )
+        embedding = response.data[0].embedding if response.data else _ZERO_VECTOR
+        embedding_cache.set(text, embedding)
+        return embedding
+    except Exception as exc:
+        logger.error(f"OpenAI embedding failed: {exc}", exc_info=True)
+        return _ZERO_VECTOR
 
 
 def get_document_embeddings(texts: List[str]) -> List[List[float]]:

@@ -57,8 +57,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 async def startup_event():
     logger.info(f"DocuMind v{s.api_version} starting...")
-    logger.info(f"Ollama URL: {s.ollama_base_url}")
-    logger.info(f"LLM Model: {s.llm_model}")
+    logger.info(f"LLM Model: {s.openai_chat_model}")
+    logger.info(f"Embedding Model: {s.openai_embedding_model}")
     logger.info(f"Data directory: {s.data_dir}")
     logger.info(f"Hybrid search weights: BM25={s.bm25_weight}, Vector={s.vector_weight}")
     logger.info(f"Reranking: {'enabled' if s.rerank_enabled else 'disabled'}")
