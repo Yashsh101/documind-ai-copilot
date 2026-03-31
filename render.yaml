@@ -1,0 +1,31 @@
+# render.yaml — Render.com deployment blueprint
+services:
+  - type: web
+    name: documind-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OLLAMA_BASE_URL
+        value: http://your-ollama-instance:11434
+      - key: LLM_MODEL
+        value: llama3
+      - key: LLM_TEMPERATURE
+        value: "0.15"
+      - key: CHUNK_SIZE
+        value: "512"
+      - key: TOP_K_RETRIEVAL
+        value: "5"
+      - key: BM25_WEIGHT
+        value: "0.35"
+      - key: VECTOR_WEIGHT
+        value: "0.65"
+      - key: RERANK_ENABLED
+        value: "true"
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: documind-data
+      mountPath: /data
+      sizeGB: 1
+    healthCheckPath: /api/v1/health

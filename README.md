@@ -1,66 +1,199 @@
-# DocuMind \ AI Customer Support Copilot (Python FastAPI + SPA)
+# DocuMind v3 — AI Customer Support Copilot
 
-DocuMind v2 is a production-grade AI customer support copilot designed to ingest policy and FAQ documents (PDFs) and provide precise, citation-backed answers to user questions using a pure Python RAG pipeline and a modern SaaS-style interface. The architecture is cleanly decoupled, making it instantly adaptable for real-world enterprise deployments.
+> Production-ready AI SaaS system with hybrid RAG, streaming responses, and premium UI.
 
-## Tech Stack
+![Python](https://img.shields.io/badge/Python-3.11+-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
+![Ollama](https://img.shields.io/badge/LLM-Ollama-orange)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-- **Backend**: Python 3, FastAPI, Uvicorn, PyMuPDF (fitz), and standard scalable ML/Python libraries.
-- **Frontend**: Clean HTML, CSS, JavaScript SPA featuring a responsive dark SaaS UI.
-- **AI Engine**: Local extractive RAG pipeline configured natively with pure Python embedding and retrieval stubs. Fully architected to accept LLM endpoints out of the box.
+---
 
-## Core Features
+## Architecture
 
-- **Document Ingestion**: Rapidly upload PDFs (e.g., refund policies) which are automatically parsed, chunked, and converted into structured knowledge base artifacts.
-- **Natural Language Querying**: Ask contextual questions and retrieve precise answers mapped dynamically to direct citations within source documents.
-- **Premium User Experience**: Notion/ChatGPT-style chat UI with smooth typing transitions, dynamic document status indicators, and resilient structured error handling wrapped via an exponential back-off API controller.
-- **Zero-Dependency Core**: The default baseline uses an entirely local, pure Python NLP scoring stub, eliminating the need for expensive API keys or external dependencies under standard testing.
-
-## Setup & Initialization
-
-1. Create a native virtual environment:
-   ```bash
-   python -m venv .venv
-   ```
-2. Activate the virtual environment:
-   - **Windows**: `.\.venv\Scripts\activate`
-   - **Linux / macOS**: `source .venv/bin/activate`
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Running the Application
-
-1. Boot the Uvicorn server:
-   ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port 8000
-   ```
-2. Open your preferred browser and navigate to the mounted SPA:
-   - `http://127.0.0.1:8000`
-
-## Usage Example
-
-- **Upload Stage**: Place or generate the `Company_Refund_Policy.pdf` inside the project directory. Drag and drop it into the "Knowledge Base" UI box, and click **Upload & Index**.
-- **Query Stage**: In the chat box, type: *"What is the refund policy?"*
-- **Response Handling**: DocuMind immediately parses the vector store and extracts the context, generating a JSON response identical to the following structure behind the scenes:
-
-```json
-{
-  "answer": "Based on the knowledge base documents, here is the relevant information: \n\n\"Company Refund Policy\nWe accept full refunds within 30 days of purchase. Just ask the support team via email....\"\n\n*(This is an extractive answer computed strictly in Python. Plug in an LLM call here to synthesize text natively!)*",
-  "citations": [
-    {
-      "document_id": "18700992_company_refund_policy.pdf",
-      "page": 1,
-      "snippet": "Company Refund Policy\nWe accept full refunds within 30 days of purchase. Just ask the support team via email...."
-    }
-  ],
-  "status": "success",
-  "message": null
-}
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (SPA)                          │
+│  ┌──────────┐  ┌──────────────┐  ┌───────────┐  ┌───────────┐ │
+│  │ Sidebar  │  │   Chat Area  │  │  Input    │  │ Streaming │ │
+│  │ • Upload │  │ • Messages   │  │ • Toggle  │  │ • SSE     │ │
+│  │ • Files  │  │ • Citations  │  │ • Actions │  │ • Tokens  │ │
+│  │ • Export │  │ • Actions    │  │ • Hotkeys │  │ • Cursor  │ │
+│  └──────────┘  └──────────────┘  └───────────┘  └───────────┘ │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ HTTP / SSE
+┌────────────────────────▼────────────────────────────────────────┐
+│                    FASTAPI BACKEND                              │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Routes: /health  /upload  /query  /chat/stream         │   │
+│  └───────────┬─────────────────┬───────────────────────────┘   │
+│              │                 │                                │
+│  ┌───────────▼─────┐  ┌───────▼───────────────────────────┐   │
+│  │  Document Mgmt  │  │        RAG Pipeline               │   │
+│  │  • Upload PDF   │  │  Query → Rewrite → Hybrid Search  │   │
+│  │  • Ingest       │  │  → BM25+Vector → Rerank → LLM    │   │
+│  │  • Chunk        │  │  → Actions → Memory → Response    │   │
+│  │  • Embed        │  │                                   │   │
+│  └─────────────────┘  └───────────────────────────────────┘   │
+│                                │                                │
+│  ┌──────────────┐  ┌──────────▼──────┐  ┌─────────────────┐   │
+│  │  TTL Cache   │  │  Memory System  │  │  Prompt Engine  │   │
+│  │  • Embedding │  │  • Short-term   │  │  • System       │   │
+│  │  • Query     │  │  • Long-term    │  │  • RAG Template │   │
+│  │  • LLM       │  │  • Disk persist │  │  • Rewrite      │   │
+│  └──────────────┘  └─────────────────┘  │  • Actions      │   │
+│                                          └─────────────────┘   │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+              ┌──────────▼──────────┐
+              │    Ollama (LLM)     │
+              │  • llama3 / phi3    │
+              │  • Embeddings       │
+              │  • Streaming        │
+              └─────────────────────┘
 ```
 
-## Extensibility & LLM Integrations
+---
 
-This system is built from the ground up by an AI/ML Engineer anticipating heavy-duty synthesis models:
-- **Embeddings**: In `app/core/embedding.py`, replace the `get_query_embedding()` logic and its hashed cache stubs with raw calls to `openai.embeddings.create(...)` or Vertex AI.
-- **Synthesis Generation**: Inside `app/core/pipeline.py` (`run_query`), the extractive Python answer generation step can directly be swapped for `client.chat.completions` (OpenAI/Anthropic) calls utilizing the properly structured local chunks as strict System Prompts.
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Hybrid Search** | BM25 (sparse) + Vector Cosine (dense) with weighted fusion |
+| **LLM Reranking** | Cross-encoder style relevance scoring via LLM |
+| **SSE Streaming** | Real-time token streaming with cursor animation |
+| **Memory System** | Short-term window + long-term disk persistence |
+| **Smart Actions** | Contextual follow-up suggestions per response |
+| **Query Rewriting** | History-aware query reformulation for better retrieval |
+| **TTL Caching** | Embedding, query, and LLM response caching with hit stats |
+| **PDF Export** | One-click conversation export to formatted PDF |
+| **Health Dashboard** | Ollama status, cache stats, indexed documents |
+
+---
+
+## Quick Start
+
+### Prerequisites
+- Python 3.11+
+- [Ollama](https://ollama.ai) installed and running
+- Llama3 model pulled: `ollama pull llama3`
+
+### Install & Run
+
+```bash
+# Clone
+git clone https://github.com/yourusername/documind-ai-copilot.git
+cd documind-ai-copilot
+
+# Virtual environment
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # Linux/Mac
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start Ollama (separate terminal)
+ollama serve
+
+# Run DocuMind
+uvicorn app.main:app --reload --port 8000
+```
+
+Open **http://localhost:8000** in your browser.
+
+---
+
+## Project Structure
+
+```
+documind-ai-copilot/
+├── app/
+│   ├── main.py                 # FastAPI entry point
+│   ├── config.py               # Settings & structured logging
+│   ├── routes/
+│   │   ├── health.py           # Health check + diagnostics
+│   │   ├── documents.py        # Upload, list, delete docs
+│   │   └── chat.py             # Query + SSE streaming
+│   ├── services/
+│   │   ├── llm.py              # Ollama LLM (generate + stream)
+│   │   ├── memory.py           # Dual memory system
+│   │   └── suggestions.py      # Action suggestion engine
+│   ├── rag/
+│   │   ├── chunking.py         # Semantic paragraph chunking
+│   │   ├── embeddings.py       # Embedding service + cache
+│   │   ├── ingestion.py        # PDF → chunks → embeddings → store
+│   │   ├── retriever.py        # Hybrid BM25 + vector search
+│   │   ├── reranker.py         # LLM-based relevance reranking
+│   │   └── pipeline.py         # Full RAG orchestrator
+│   ├── models/
+│   │   └── schemas.py          # Pydantic request/response models
+│   ├── core/
+│   │   ├── prompts.py          # All prompt templates
+│   │   └── cache.py            # TTL cache implementation
+│   └── static/
+│       ├── index.html          # SPA shell
+│       ├── styles.css          # Premium dark-mode design system
+│       └── app.js              # Frontend application
+├── data/                        # Indexed document storage
+├── .env                         # Environment configuration
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+└── render.yaml                  # Render.com deployment blueprint
+```
+
+---
+
+## API Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/health` | Health check + Ollama status + cache stats |
+| `POST` | `/api/v1/upload` | Upload and index PDF files |
+| `GET` | `/api/v1/documents` | List indexed documents |
+| `DELETE` | `/api/v1/documents/{id}` | Remove a document |
+| `POST` | `/api/v1/query` | Standard query (JSON response) |
+| `POST` | `/api/v1/chat/stream` | Streaming query (SSE) |
+
+---
+
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `LLM_MODEL` | `llama3` | Primary LLM model |
+| `LLM_TEMPERATURE` | `0.15` | Generation temperature |
+| `CHUNK_SIZE` | `512` | Max characters per chunk |
+| `CHUNK_OVERLAP` | `64` | Overlap between chunks |
+| `TOP_K_RETRIEVAL` | `5` | Number of chunks to retrieve |
+| `BM25_WEIGHT` | `0.35` | BM25 score weight in fusion |
+| `VECTOR_WEIGHT` | `0.65` | Vector score weight in fusion |
+| `RERANK_ENABLED` | `true` | Enable LLM-based reranking |
+| `MEMORY_WINDOW_SIZE` | `10` | Conversation turns in memory |
+
+---
+
+## Deployment
+
+### Docker
+```bash
+docker-compose up -d
+docker exec -it documind-ai-copilot-ollama-1 ollama pull llama3
+```
+
+### Render.com
+1. Push to GitHub
+2. Connect repo to Render
+3. `render.yaml` handles the rest
+4. Set `OLLAMA_BASE_URL` to your Ollama instance
+
+### Vercel (Frontend Only)
+Deploy `app/static/` as a static site pointing to your backend URL.
+
+---
+
+## License
+
+MIT
