@@ -9,7 +9,7 @@ SYSTEM_PROMPT = "You are an expert AI support assistant."
 
 
 def _get_openai_client() -> Optional[OpenAI]:
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = s.openai_api_key
     if not api_key:
         return None
     return OpenAI(api_key=api_key)
@@ -116,13 +116,20 @@ async def stream_answer(
             model=s.openai_chat_model,
             messages=messages,
             temperature=s.llm_temperature,
+            max_tokens=1024,
         ) as stream:
             async for event in stream:
                 token = None
-                if getattr(event, "type", None) in {"response.output_text.delta", "response.delta", "message.delta"}:
-                    token = getattr(event, "delta", None)
-                if isinstance(token, dict):
-                    token = token.get("content") or token.get("text")
+                event_type = getattr(event, "type", None)
+                if event_type in {"response.output_text.delta", "response.delta", "message.delta", "delta"}:
+                    token_value = getattr(event, "delta", None)
+                    if isinstance(token_value, dict):
+                        token = token_value.get("content") or token_value.get("text")
+                    elif isinstance(token_value, str):
+                        token = token_value
+                elif event_type in {"response.completed", "message.complete"}:
+                    break
+
                 if token:
                     yield str(token)
     except Exception as exc:

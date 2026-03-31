@@ -1,5 +1,4 @@
 from datetime import datetime
-import os
 from fastapi import APIRouter
 from app.config import get_settings
 
@@ -9,7 +8,7 @@ settings = get_settings()
 
 @router.get("/health")
 async def health_check():
-    openai_status = "online" if os.getenv("OPENAI_API_KEY") else "offline"
+    openai_status = "online" if settings.openai_api_key else "offline"
 
     return {
         "status": "ok",

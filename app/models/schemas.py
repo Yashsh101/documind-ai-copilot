@@ -57,5 +57,5 @@ class UploadResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     version: str
-    ollama_status: Optional[str] = "unknown"
+    provider: Optional[str] = "openai"
     indexed_documents: Optional[int] = 0

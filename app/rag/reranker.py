@@ -14,7 +14,7 @@ s = get_settings()
 
 
 def _get_openai_client() -> Optional[OpenAI]:
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = s.openai_api_key
     if not api_key:
         return None
     return OpenAI(api_key=api_key)

@@ -5,6 +5,7 @@ import os
 import json
 import logging
 from functools import lru_cache
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
@@ -62,6 +63,7 @@ class Settings(BaseSettings):
     rerank_enabled: bool = True
 
     # OpenAI / LLM
+    openai_api_key: Optional[str] = None
     llm_model: str = "gpt-4o-mini"
     openai_chat_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"

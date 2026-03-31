@@ -140,7 +140,7 @@ def run_pipeline(
     return result
 
 
-def stream_pipeline(
+async def stream_pipeline(
     query: str,
     document_ids: List[str] = None,
     history: List[Dict[str, str]] = None,
@@ -187,7 +187,7 @@ def stream_pipeline(
 
     # Stream tokens
     full_answer = ""
-    for token in stream_answer(query, context_text, history, no_context=no_context):
+    async for token in stream_answer(query, context_text, history, no_context=no_context):
         full_answer += token
         yield {"type": "token", "content": token}
 

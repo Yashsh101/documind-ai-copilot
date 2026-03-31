@@ -57,6 +57,7 @@ async def query_endpoint(req: QueryRequest):
 
 
 @router.post("/chat/stream")
+@router.post("/query/stream")
 async def stream_chat_endpoint(req: QueryRequest):
     """
     Streaming chat endpoint using Server-Sent Events (SSE).
@@ -66,7 +67,7 @@ async def stream_chat_endpoint(req: QueryRequest):
 
     async def event_generator():
         try:
-            for chunk in stream_pipeline(
+            async for chunk in stream_pipeline(
                 query=req.question,
                 document_ids=req.document_ids,
                 history=req.history,
