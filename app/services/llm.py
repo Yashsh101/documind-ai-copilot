@@ -8,8 +8,8 @@ Provides interfaces for:
 
 All implementations use OpenAI APIs only (no Ollama).
 """
-from typing import Optional, List, Dict, Any, AsyncGenerator
-from openai import OpenAI, AsyncOpenAI
+from typing import Optional, List, Dict, Any
+from openai import OpenAI
 from app.config import get_settings, logger
 from app.core.prompts import SYSTEM_PROMPT, RAG_PROMPT_TEMPLATE, QUERY_REWRITE_PROMPT
 from app.core.cache import llm_cache
@@ -23,14 +23,6 @@ def _get_openai_client() -> Optional[OpenAI]:
     if not api_key:
         return None
     return OpenAI(api_key=api_key)
-
-
-def _get_async_openai_client() -> Optional[AsyncOpenAI]:
-    """Get async OpenAI client if API key is available."""
-    api_key = s.openai_api_key
-    if not api_key:
-        return None
-    return AsyncOpenAI(api_key=api_key)
 
 
 def _format_history(history: List[Dict[str, str]]) -> str:
@@ -149,10 +141,11 @@ async def stream_answer(
     context: str = "",
     history: List[Dict[str, str]] = None,
     no_context: bool = False,
-) -> AsyncGenerator[str, None]:
+):
     """
     Stream answer tokens in real-time using OpenAI streaming API.
     Yields individual tokens as they arrive.
+    Uses synchronous OpenAI client in async context.
     
     Args:
         query: User question
@@ -163,7 +156,7 @@ async def stream_answer(
     Yields:
         Token strings
     """
-    client = _get_async_openai_client()
+    client = _get_openai_client()
     if client is None:
         logger.warning("OPENAI_API_KEY not set; cannot stream answer")
         yield "I'm unable to generate a response at this time. Please add OPENAI_API_KEY."
