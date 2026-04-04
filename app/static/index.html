@@ -1,48 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DocuMind AI Copilot</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+  <meta charset="UTF-8" />
+  <title>DocuMind</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/static/styles.css" />
 </head>
 
 <body>
-    <div class="app-shell">
-        <aside class="sidebar">
-            <div class="brand">DocuMind</div>
 
-            <button id="upload-btn" class="primary-btn">Upload Files</button>
-            <input type="file" id="file-input" multiple hidden />
+<div class="app">
 
-            <div class="sidebar-section">
-                <div class="section-title">Indexed Documents</div>
-                <div id="documents-list" class="documents-list">
-                    <div class="doc-empty">No documents uploaded yet.</div>
-                </div>
-            </div>
+  <aside class="sidebar">
+    <h2>DocuMind</h2>
 
-            <button id="clear-chat" class="secondary-btn">Clear Chat</button>
-        </aside>
+    <button id="upload-btn">Upload PDF</button>
+    <input type="file" id="file-input" hidden multiple />
 
-        <main class="main-panel">
-            <header class="topbar">
-                <div class="topbar-title">AI Customer Support Copilot</div>
-                <div id="backend-status" class="status-badge">Checking...</div>
-            </header>
+    <div id="documents-list"></div>
 
-            <section id="messages" class="messages"></section>
+    <button id="clear-chat">Clear</button>
+  </aside>
 
-            <form id="chat-form" class="composer">
-                <input id="chat-input" type="text" placeholder="Ask a question about your documents..."
-                    autocomplete="off" />
-                <button type="submit" class="send-btn">Send</button>
-            </form>
-        </main>
-    </div>
+  <main class="chat">
 
-    <script src="/static/app.js"></script>
+    <div id="messages" class="messages"></div>
+
+    <form id="chat-form" class="input-box">
+      <input id="chat-input" placeholder="Ask something..." />
+      <button type="submit">Send</button>
+    </form>
+
+  </main>
+
+</div>
+
+<script src="/static/app.js"></script>
 </body>
-
 </html>

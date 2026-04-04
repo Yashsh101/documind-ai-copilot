@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
-![Ollama](https://img.shields.io/badge/LLM-Ollama-orange)
+![OpenAI](https://img.shields.io/badge/LLM-OpenAI-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
@@ -46,8 +46,8 @@
 └────────────────────────┬────────────────────────────────────────┘
                          │
               ┌──────────▼──────────┐
-              │    Ollama (LLM)     │
-              │  • llama3 / phi3    │
+              │   OpenAI (LLM)      │
+              │  • gpt-4o-mini      │
               │  • Embeddings       │
               │  • Streaming        │
               └─────────────────────┘
@@ -67,7 +67,7 @@
 | **Query Rewriting** | History-aware query reformulation for better retrieval |
 | **TTL Caching** | Embedding, query, and LLM response caching with hit stats |
 | **PDF Export** | One-click conversation export to formatted PDF |
-| **Health Dashboard** | Ollama status, cache stats, indexed documents |
+| **Health Dashboard** | OpenAI status, cache stats, indexed documents |
 
 ---
 
@@ -75,8 +75,7 @@
 
 ### Prerequisites
 - Python 3.11+
-- [Ollama](https://ollama.ai) installed and running
-- Llama3 model pulled: `ollama pull llama3`
+- OpenAI API key (set `OPENAI_API_KEY` in `.env`)
 
 ### Install & Run
 
@@ -92,9 +91,6 @@ python -m venv .venv
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Start Ollama (separate terminal)
-ollama serve
 
 # Run DocuMind
 uvicorn app.main:app --reload --port 8000
@@ -116,7 +112,7 @@ documind-ai-copilot/
 │   │   ├── documents.py        # Upload, list, delete docs
 │   │   └── chat.py             # Query + SSE streaming
 │   ├── services/
-│   │   ├── llm.py              # Ollama LLM (generate + stream)
+│   │   ├── llm.py              # OpenAI LLM (generate + stream)
 │   │   ├── memory.py           # Dual memory system
 │   │   └── suggestions.py      # Action suggestion engine
 │   ├── rag/
@@ -149,7 +145,7 @@ documind-ai-copilot/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/v1/health` | Health check + Ollama status + cache stats |
+| `GET` | `/api/v1/health` | Health check + OpenAI status + cache stats |
 | `POST` | `/api/v1/upload` | Upload and index PDF files |
 | `GET` | `/api/v1/documents` | List indexed documents |
 | `DELETE` | `/api/v1/documents/{id}` | Remove a document |
@@ -162,8 +158,8 @@ documind-ai-copilot/
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
-| `LLM_MODEL` | `llama3` | Primary LLM model |
+| `OPENAI_API_KEY` | (required) | OpenAI API key |
+| `OPENAI_CHAT_MODEL` | `gpt-4o-mini` | Primary LLM model |
 | `LLM_TEMPERATURE` | `0.15` | Generation temperature |
 | `CHUNK_SIZE` | `512` | Max characters per chunk |
 | `CHUNK_OVERLAP` | `64` | Overlap between chunks |
@@ -179,15 +175,14 @@ documind-ai-copilot/
 
 ### Docker
 ```bash
-docker-compose up -d
-docker exec -it documind-ai-copilot-ollama-1 ollama pull llama3
+OPENAI_API_KEY=sk-... docker-compose up -d
 ```
 
 ### Render.com
 1. Push to GitHub
 2. Connect repo to Render
 3. `render.yaml` handles the rest
-4. Set `OLLAMA_BASE_URL` to your Ollama instance
+4. Set `OPENAI_API_KEY` environment variable in Render dashboard
 
 ### Vercel (Frontend Only)
 Deploy `app/static/` as a static site pointing to your backend URL.
