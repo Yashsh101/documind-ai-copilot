@@ -5,9 +5,21 @@ Generates dense vector embeddings via OpenAI with in-memory caching.
 """
 import os
 from typing import List, Optional
-from openai import OpenAI
+from openai import OpenAI, RateLimitError, APIError
 from app.config import get_settings, logger
 from app.core.cache import embedding_cache
+
+"""
+DocuMind v3 — Embedding Service
+
+Generates dense vector embeddings via OpenAI with in-memory caching.
+"""
+import os
+from typing import List, Optional
+from openai import OpenAI, RateLimitError, APIError
+from app.config import get_settings, logger
+from app.core.cache import embedding_cache
+from app.core.exceptions import OpenAIQuotaExceededException, OpenAIAPIError
 
 s = get_settings()
 
@@ -26,6 +38,10 @@ def get_query_embedding(text: str) -> List[float]:
     """
     Get embedding for a single query text. Uses TTL cache to avoid
     redundant OpenAI API calls.
+    
+    Raises:
+        OpenAIQuotaExceededException: If OpenAI quota is exceeded
+        OpenAIAPIError: If OpenAI API call fails
     """
     if not text or not text.strip():
         return _ZERO_VECTOR
@@ -47,9 +63,22 @@ def get_query_embedding(text: str) -> List[float]:
         embedding = response.data[0].embedding if response.data else _ZERO_VECTOR
         embedding_cache.set(text, embedding)
         return embedding
+    except RateLimitError as exc:
+        # Check if this is an insufficient_quota error
+        error_msg = str(exc)
+        if "insufficient_quota" in error_msg.lower():
+            logger.error(f"OpenAI quota exceeded: {exc}")
+            raise OpenAIQuotaExceededException()
+        else:
+            logger.error(f"OpenAI rate limit: {exc}")
+            raise OpenAIAPIError("OpenAI API rate limit exceeded. Please try again in a moment.")
+    except APIError as exc:
+        logger.error(f"OpenAI API error: {exc}")
+        raise OpenAIAPIError(f"OpenAI API error: {str(exc)[:100]}")
     except Exception as exc:
-        logger.error(f"OpenAI embedding failed: {exc}", exc_info=True)
-        return _ZERO_VECTOR
+        logger.error(f"Embedding generation failed: {exc}", exc_info=True)
+        raise OpenAIAPIError()
+
 
 
 def get_document_embeddings(texts: List[str]) -> List[List[float]]:

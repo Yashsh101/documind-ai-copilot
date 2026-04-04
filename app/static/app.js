@@ -41,11 +41,31 @@ async function sendMessage(text) {
       })
     });
 
+    const data = await response.json();
+
+    // Check for errors from backend
+    if (data.error_type === "quota_exceeded") {
+      botMsg.className = "message error";
+      botMsg.textContent = `❌ OpenAI Quota Exceeded: ${data.message}`;
+      return;
+    }
+
+    if (data.error_type === "api_error") {
+      botMsg.className = "message error";
+      botMsg.textContent = `⚠️ API Error: ${data.message}`;
+      return;
+    }
+
+    if (data.status === "error" && data.message) {
+      botMsg.className = "message error";
+      botMsg.textContent = `❌ Error: ${data.message}`;
+      return;
+    }
+
+    // Check for successful response
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-
-    const data = await response.json();
 
     if (data.answer) {
       botMsg.textContent = data.answer;
@@ -61,6 +81,7 @@ async function sendMessage(text) {
 
   } catch (error) {
     console.error("Query failed:", error);
+    botMsg.className = "message error";
     botMsg.textContent = `❌ Error: ${error.message}`;
   }
 }

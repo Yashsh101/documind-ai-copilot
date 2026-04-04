@@ -9,10 +9,11 @@ Provides interfaces for:
 All implementations use OpenAI APIs only (no Ollama).
 """
 from typing import Optional, List, Dict, Any
-from openai import OpenAI
+from openai import OpenAI, RateLimitError, APIError
 from app.config import get_settings, logger
 from app.core.prompts import SYSTEM_PROMPT, RAG_PROMPT_TEMPLATE, QUERY_REWRITE_PROMPT
 from app.core.cache import llm_cache
+from app.core.exceptions import OpenAIQuotaExceededException, OpenAIAPIError
 
 s = get_settings()
 
@@ -99,11 +100,15 @@ def generate_answer(
     
     Returns:
         Generated answer string
+        
+    Raises:
+        OpenAIQuotaExceededException: If OpenAI quota is exceeded
+        OpenAIAPIError: If OpenAI API call fails
     """
     client = _get_openai_client()
     if client is None:
         logger.warning("OPENAI_API_KEY not set; cannot generate answer")
-        return "I'm unable to generate a response at this time. Please add OPENAI_API_KEY to your configuration."
+        raise OpenAIAPIError("OpenAI API key not configured.")
     
     history_str = _format_history(history) if history else ""
     
@@ -131,9 +136,20 @@ def generate_answer(
         )
         answer = response.choices[0].message.content.strip()
         return answer
+    except RateLimitError as exc:
+        error_msg = str(exc)
+        if "insufficient_quota" in error_msg.lower():
+            logger.error(f"OpenAI quota exceeded: {exc}")
+            raise OpenAIQuotaExceededException()
+        else:
+            logger.error(f"OpenAI rate limit: {exc}")
+            raise OpenAIAPIError("OpenAI API rate limit exceeded. Please try again in a moment.")
+    except APIError as exc:
+        logger.error(f"OpenAI API error: {exc}")
+        raise OpenAIAPIError(f"OpenAI API error: {str(exc)[:100]}")
     except Exception as exc:
         logger.error(f"Answer generation failed: {exc}", exc_info=True)
-        return "An error occurred while generating the response. Please try again."
+        raise OpenAIAPIError()
 
 
 async def stream_answer(

@@ -8,6 +8,7 @@ import time
 from typing import List, Dict, Any, Tuple, Optional
 from app.config import get_settings, logger
 from app.core.cache import query_cache
+from app.core.exceptions import OpenAIQuotaExceededException, OpenAIAPIError
 from app.rag.ingestion import load_all_chunks
 from app.rag.retriever import hybrid_search
 from app.rag.reranker import rerank_chunks
@@ -61,7 +62,10 @@ def run_pipeline(
 
     if not chunks:
         # No documents — use no-context fallback
-        answer = generate_answer(query, "", history, no_context=True)
+        try:
+            answer = generate_answer(query, "", history, no_context=True)
+        except (OpenAIQuotaExceededException, OpenAIAPIError):
+            raise
         actions, conf = generate_actions(query, answer)
         result = (answer, [], {
             "confidence_score": conf,
@@ -96,7 +100,11 @@ def run_pipeline(
 
     # === Step 6: Answer Generation ===
     gen_start = time.time()
-    answer = generate_answer(query, context_text, history)
+    try:
+        answer = generate_answer(query, context_text, history)
+    except (OpenAIQuotaExceededException, OpenAIAPIError):
+        # Re-raise so the routes can catch and return proper error to client
+        raise
     logger.info(f"Answer generation: {time.time() - gen_start:.2f}s")
 
     # === Step 7: Action Suggestions ===

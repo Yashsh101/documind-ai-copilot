@@ -6,9 +6,10 @@ Generates contextual follow-up actions and a confidence score using OpenAI.
 import json
 import os
 from typing import List, Dict, Tuple, Optional
-from openai import OpenAI
+from openai import OpenAI, RateLimitError, APIError
 from app.config import get_settings, logger
 from app.core.prompts import ACTION_SUGGESTION_PROMPT
+from app.core.exceptions import OpenAIQuotaExceededException, OpenAIAPIError
 
 s = get_settings()
 
@@ -23,6 +24,9 @@ def _get_openai_client() -> Optional[OpenAI]:
 def generate_actions(query: str, answer: str) -> Tuple[List[Dict[str, str]], float]:
     """
     Generate up to 3 contextual follow-up actions and a confidence score.
+    
+    Note: If quota or API error occurs, gracefully returns empty actions
+    rather than failing the entire pipeline.
 
     Returns: (actions_list, confidence_score)
     """
@@ -48,6 +52,11 @@ def generate_actions(query: str, answer: str) -> Tuple[List[Dict[str, str]], flo
         parsed = json.loads(content)
     except json.JSONDecodeError:
         logger.warning(f"Invalid JSON from action engine: {content[:100]}")
+        return [], 0.0
+    except (RateLimitError, APIError) as exc:
+        # Gracefully degrade: just return empty actions
+        # The main answer has already been generated, so don't fail the pipeline
+        logger.warning(f"Action suggestion skipped (quota/API): {exc}")
         return [], 0.0
     except Exception as exc:
         logger.error(f"Action generation failed: {exc}", exc_info=True)

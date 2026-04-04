@@ -5,6 +5,7 @@ import json
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from app.config import logger
+from app.core.exceptions import OpenAIQuotaExceededException, OpenAIAPIError
 from app.models.schemas import QueryRequest, QueryResponse, CitationItem, ActionItem
 from app.rag.pipeline import run_pipeline, stream_pipeline
 
@@ -43,6 +44,30 @@ async def query_endpoint(req: QueryRequest):
             latency_ms=extras.get("latency_ms", 0.0),
             eval_metrics=extras.get("eval_metrics", {}),
         )
+    except OpenAIQuotaExceededException as e:
+        logger.error(f"OpenAI quota exceeded: {e}")
+        return JSONResponse(status_code=503, content={
+            "answer": None,
+            "citations": [],
+            "status": "error",
+            "message": str(e.user_facing_message),
+            "error_type": "quota_exceeded",
+            "confidence_score": 0.0,
+            "suggested_actions": [],
+            "latency_ms": 0.0,
+        })
+    except OpenAIAPIError as e:
+        logger.error(f"OpenAI API error: {e}")
+        return JSONResponse(status_code=503, content={
+            "answer": None,
+            "citations": [],
+            "status": "error",
+            "message": str(e.user_facing_message),
+            "error_type": "api_error",
+            "confidence_score": 0.0,
+            "suggested_actions": [],
+            "latency_ms": 0.0,
+        })
     except Exception as e:
         logger.error(f"Query pipeline failed: {e}", exc_info=True)
         return JSONResponse(status_code=500, content={
@@ -75,6 +100,22 @@ async def stream_chat_endpoint(req: QueryRequest):
             ):
                 event_data = json.dumps(chunk)
                 yield f"data: {event_data}\n\n"
+        except OpenAIQuotaExceededException as e:
+            logger.error(f"Stream: OpenAI quota exceeded: {e}")
+            error_event = json.dumps({
+                "type": "error",
+                "error_type": "quota_exceeded",
+                "content": str(e.user_facing_message)
+            })
+            yield f"data: {error_event}\n\n"
+        except OpenAIAPIError as e:
+            logger.error(f"Stream: OpenAI API error: {e}")
+            error_event = json.dumps({
+                "type": "error",
+                "error_type": "api_error",
+                "content": str(e.user_facing_message)
+            })
+            yield f"data: {error_event}\n\n"
         except Exception as e:
             logger.error(f"Stream pipeline failed: {e}", exc_info=True)
             error_event = json.dumps({
