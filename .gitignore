@@ -10,13 +10,18 @@ env/
 
 # Environment variables
 .env
+*.env.local
 
-# Data directory
+# Data and uploads
 data/
+vector_store/
+uploads/
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
@@ -24,3 +29,15 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Backups and temp files
+*.bak
+*.old
+*.tmp
+*.pdf
+replacements.txt
