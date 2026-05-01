@@ -4,9 +4,15 @@ AI customer-support copilot that answers policy questions with hybrid RAG, reran
 
 ## Live Demo
 
-- Demo URL: `Coming soon - deploy the FastAPI service on Render or Railway`
+- Demo: Demo coming soon
 - Local UI: `http://localhost:8000`
 - Local API docs: `http://localhost:8000/docs`
+
+## Visual Proof
+
+![DocuMind chat UI placeholder](docs/images/documind-chat-placeholder.svg)
+
+Replace this placeholder with a real chat/upload screenshot after the hosted demo is available.
 
 ## Problem
 
