@@ -1,194 +1,166 @@
-# DocuMind v3 — AI Customer Support Copilot
+# DocuMind AI Copilot
 
-> Production-ready AI SaaS system with hybrid RAG, streaming responses, and premium UI.
+AI customer-support copilot that answers policy questions with hybrid RAG, reranking, conversation memory, citations, and streaming responses.
 
-![Python](https://img.shields.io/badge/Python-3.11+-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
-![OpenAI](https://img.shields.io/badge/LLM-OpenAI-blue)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+## Live Demo
 
----
+- Demo URL: `Coming soon - deploy the FastAPI service on Render or Railway`
+- Local UI: `http://localhost:8000`
+- Local API docs: `http://localhost:8000/docs`
 
-## Architecture
+## Problem
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        FRONTEND (SPA)                          │
-│  ┌──────────┐  ┌──────────────┐  ┌───────────┐  ┌───────────┐ │
-│  │ Sidebar  │  │   Chat Area  │  │  Input    │  │ Streaming │ │
-│  │ • Upload │  │ • Messages   │  │ • Toggle  │  │ • SSE     │ │
-│  │ • Files  │  │ • Citations  │  │ • Actions │  │ • Tokens  │ │
-│  │ • Export │  │ • Actions    │  │ • Hotkeys │  │ • Cursor  │ │
-│  └──────────┘  └──────────────┘  └───────────┘  └───────────┘ │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ HTTP / SSE
-┌────────────────────────▼────────────────────────────────────────┐
-│                    FASTAPI BACKEND                              │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Routes: /health  /upload  /query  /chat/stream         │   │
-│  └───────────┬─────────────────┬───────────────────────────┘   │
-│              │                 │                                │
-│  ┌───────────▼─────┐  ┌───────▼───────────────────────────┐   │
-│  │  Document Mgmt  │  │        RAG Pipeline               │   │
-│  │  • Upload PDF   │  │  Query → Rewrite → Hybrid Search  │   │
-│  │  • Ingest       │  │  → BM25+Vector → Rerank → LLM    │   │
-│  │  • Chunk        │  │  → Actions → Memory → Response    │   │
-│  │  • Embed        │  │                                   │   │
-│  └─────────────────┘  └───────────────────────────────────┘   │
-│                                │                                │
-│  ┌──────────────┐  ┌──────────▼──────┐  ┌─────────────────┐   │
-│  │  TTL Cache   │  │  Memory System  │  │  Prompt Engine  │   │
-│  │  • Embedding │  │  • Short-term   │  │  • System       │   │
-│  │  • Query     │  │  • Long-term    │  │  • RAG Template │   │
-│  │  • LLM       │  │  • Disk persist │  │  • Rewrite      │   │
-│  └──────────────┘  └─────────────────┘  │  • Actions      │   │
-│                                          └─────────────────┘   │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-              ┌──────────▼──────────┐
-              │   OpenAI (LLM)      │
-              │  • gpt-4o-mini      │
-              │  • Embeddings       │
-              │  • Streaming        │
-              └─────────────────────┘
-```
-
----
+Support teams need fast answers from company policies, but generic chatbots often miss context, hallucinate, or fail to explain where an answer came from. DocuMind indexes support documents and returns citation-backed responses with confidence and suggested next actions.
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Hybrid Search** | BM25 (sparse) + Vector Cosine (dense) with weighted fusion |
-| **LLM Reranking** | Cross-encoder style relevance scoring via LLM |
-| **SSE Streaming** | Real-time token streaming with cursor animation |
-| **Memory System** | Short-term window + long-term disk persistence |
-| **Smart Actions** | Contextual follow-up suggestions per response |
-| **Query Rewriting** | History-aware query reformulation for better retrieval |
-| **TTL Caching** | Embedding, query, and LLM response caching with hit stats |
-| **PDF Export** | One-click conversation export to formatted PDF |
-| **Health Dashboard** | OpenAI status, cache stats, indexed documents |
+- PDF upload and document indexing.
+- Hybrid retrieval with BM25 and FAISS.
+- Reranking stage to improve final context quality.
+- OpenAI chat and embedding configuration.
+- Conversation memory window for follow-up questions.
+- Standard JSON query endpoint and SSE streaming endpoint.
+- Lightweight bundled SPA for upload and chat workflows.
+- Docker and Render deployment configuration.
 
----
+## Architecture
 
-## Quick Start
-
-### Prerequisites
-- Python 3.11+
-- OpenAI API key (set `OPENAI_API_KEY` in `.env`)
-
-### Install & Run
-
-```bash
-# Clone
-git clone https://github.com/yourusername/documind-ai-copilot.git
-cd documind-ai-copilot
-
-# Virtual environment
-python -m venv .venv
-.venv\Scripts\activate  # Windows
-# source .venv/bin/activate  # Linux/Mac
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run DocuMind
-uvicorn app.main:app --reload --port 8000
+```mermaid
+flowchart LR
+    U[Support Agent] --> UI[Bundled SPA]
+    UI --> API[FastAPI API]
+    API --> UPLOAD[PDF Upload]
+    UPLOAD --> CHUNK[Chunking]
+    CHUNK --> INDEX[BM25 + FAISS Index]
+    API --> MEMORY[Conversation Memory]
+    API --> RETRIEVE[Hybrid Retriever]
+    RETRIEVE --> RERANK[Reranker]
+    RERANK --> LLM[OpenAI Chat Model]
+    LLM --> CITE[Citations + Suggested Actions]
+    CITE --> UI
 ```
 
-Open **http://localhost:8000** in your browser.
+## Tech Stack
 
----
+| Layer | Tools |
+| --- | --- |
+| API | FastAPI, Pydantic Settings, Uvicorn |
+| RAG | PyMuPDF, LangChain text splitters, FAISS, rank-bm25 |
+| LLM | OpenAI chat and embedding models |
+| UI | Static HTML, CSS, JavaScript served by FastAPI |
+| Deployment | Docker, Docker Compose, Render blueprint |
+| Testing | Pytest smoke tests |
 
 ## Project Structure
 
-```
+```text
 documind-ai-copilot/
 ├── app/
-│   ├── main.py                 # FastAPI entry point
-│   ├── config.py               # Settings & structured logging
-│   ├── routes/
-│   │   ├── health.py           # Health check + diagnostics
-│   │   ├── documents.py        # Upload, list, delete docs
-│   │   └── chat.py             # Query + SSE streaming
-│   ├── services/
-│   │   ├── llm.py              # OpenAI LLM (generate + stream)
-│   │   ├── memory.py           # Dual memory system
-│   │   └── suggestions.py      # Action suggestion engine
-│   ├── rag/
-│   │   ├── chunking.py         # Semantic paragraph chunking
-│   │   ├── embeddings.py       # Embedding service + cache
-│   │   ├── ingestion.py        # PDF → chunks → embeddings → store
-│   │   ├── retriever.py        # Hybrid BM25 + vector search
-│   │   ├── reranker.py         # LLM-based relevance reranking
-│   │   └── pipeline.py         # Full RAG orchestrator
-│   ├── models/
-│   │   └── schemas.py          # Pydantic request/response models
-│   ├── core/
-│   │   ├── prompts.py          # All prompt templates
-│   │   └── cache.py            # TTL cache implementation
-│   └── static/
-│       ├── index.html          # SPA shell
-│       ├── styles.css          # Premium dark-mode design system
-│       └── app.js              # Frontend application
-├── data/                        # Indexed document storage
-├── .env                         # Environment configuration
-├── requirements.txt
+│   ├── rag/              # chunking, embeddings, retrieval, reranking, pipeline
+│   ├── routes/           # health, upload, query, stream routes
+│   ├── services/         # LLM, memory, suggestions
+│   ├── static/           # bundled SPA
+│   └── main.py
+├── tests/                # API smoke tests
+├── .env.example
+├── DEPLOYMENT.md
 ├── Dockerfile
 ├── docker-compose.yml
-└── render.yaml                  # Render.com deployment blueprint
+└── render.yaml
 ```
 
----
+## Setup
 
-## API Reference
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn app.main:app --reload
+```
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/health` | Health check + OpenAI status + cache stats |
-| `POST` | `/api/v1/upload` | Upload and index PDF files |
-| `GET` | `/api/v1/documents` | List indexed documents |
-| `DELETE` | `/api/v1/documents/{id}` | Remove a document |
-| `POST` | `/api/v1/query` | Standard query (JSON response) |
-| `POST` | `/api/v1/chat/stream` | Streaming query (SSE) |
+Open `http://localhost:8000` for the UI or `http://localhost:8000/docs` for the API.
 
----
+## Environment Variables
 
-## Configuration
+| Variable | Purpose |
+| --- | --- |
+| `OPENAI_API_KEY` | Optional locally, required for production-quality answers |
+| `OPENAI_CHAT_MODEL` | Chat model used for response generation |
+| `OPENAI_EMBEDDING_MODEL` | Embedding model for semantic retrieval |
+| `LLM_TEMPERATURE` | Generation temperature |
+| `CHUNK_SIZE` / `CHUNK_OVERLAP` | Document chunking controls |
+| `TOP_K_RETRIEVAL` | Number of retrieved candidates |
+| `BM25_WEIGHT` / `VECTOR_WEIGHT` | Hybrid retrieval weighting |
+| `RERANK_ENABLED` | Enables reranking stage |
+| `MEMORY_WINDOW_SIZE` | Number of recent turns used as memory |
+| `DATA_DIR` | Local document index directory |
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENAI_API_KEY` | (required) | OpenAI API key |
-| `OPENAI_CHAT_MODEL` | `gpt-4o-mini` | Primary LLM model |
-| `LLM_TEMPERATURE` | `0.15` | Generation temperature |
-| `CHUNK_SIZE` | `512` | Max characters per chunk |
-| `CHUNK_OVERLAP` | `64` | Overlap between chunks |
-| `TOP_K_RETRIEVAL` | `5` | Number of chunks to retrieve |
-| `BM25_WEIGHT` | `0.35` | BM25 score weight in fusion |
-| `VECTOR_WEIGHT` | `0.65` | Vector score weight in fusion |
-| `RERANK_ENABLED` | `true` | Enable LLM-based reranking |
-| `MEMORY_WINDOW_SIZE` | `10` | Conversation turns in memory |
+## Usage and API
 
----
+Health:
+
+```bash
+curl http://localhost:8000/api/v1/health
+```
+
+Upload a PDF:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/upload \
+  -F "files=@examples/Company_Refund_Policy.pdf"
+```
+
+Ask a question:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is the refund window?","session_id":"demo"}'
+```
+
+Stream a response:
+
+```bash
+curl -N -X POST http://localhost:8000/api/v1/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"question":"Summarize the refund policy.","session_id":"demo"}'
+```
+
+## RAG Approach
+
+1. Uploaded PDFs are parsed into text.
+2. Text is chunked with overlap to preserve local context.
+3. The system builds lexical and vector indexes.
+4. Query candidates are retrieved with BM25 and FAISS.
+5. A reranker selects the strongest context.
+6. The LLM receives retrieved context and recent memory.
+7. The response includes citations, confidence, and suggested actions.
+
+## Evaluation
+
+Current evaluation is implemented as smoke-level validation. Before using this in a real support workflow, add a labeled support-policy question set and track:
+
+- Retrieval hit rate against expected source documents.
+- Citation coverage.
+- Answer faithfulness from policy text.
+- Escalation quality for low-confidence or unsupported questions.
+- p50/p95 latency for `/query` and `/chat/stream`.
 
 ## Deployment
 
-### Docker
-```bash
-OPENAI_API_KEY=sk-... docker-compose up -d
-```
+Use Render or Railway for the FastAPI service. The app is not a good fit for Vercel serverless because it keeps local indexes and serves streaming responses.
 
-### Render.com
-1. Push to GitHub
-2. Connect repo to Render
-3. `render.yaml` handles the rest
-4. Set `OPENAI_API_KEY` environment variable in Render dashboard
+See `DEPLOYMENT.md` for the Render/Railway plan and production checklist.
 
-### Vercel (Frontend Only)
-Deploy `app/static/` as a static site pointing to your backend URL.
+## Roadmap
 
----
+- Add a seeded evaluation dataset for policy QA.
+- Add persistent vector storage for multi-instance deployments.
+- Add authentication for uploads and admin actions.
+- Add CI gates for tests and linting.
+- Add demo deployment with sample policy documents.
 
-## License
+## Author
 
-MIT
+Yash Sharma - MCA AI/ML student focused on RAG, NLP, GenAI, and production backend AI systems.

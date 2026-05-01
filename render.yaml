@@ -6,10 +6,14 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: OLLAMA_BASE_URL
-        value: http://your-ollama-instance:11434
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_CHAT_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_EMBEDDING_MODEL
+        value: text-embedding-3-small
       - key: LLM_MODEL
-        value: llama3
+        value: gpt-4o-mini
       - key: LLM_TEMPERATURE
         value: "0.15"
       - key: CHUNK_SIZE
