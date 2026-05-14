@@ -22,9 +22,11 @@
 | **Production Deployment** | Docker + Render.com | One-command scaling to cloud infrastructure |
 | **OpenAI-Only** | No local LLM dependencies | Simplified deployment, no GPU requirements, predictable latency |
 
----
+- Demo: Demo coming soon
+- Local UI: `http://localhost:8000`
+- Local API docs: `http://localhost:8000/docs`
 
-## Architecture
+## Visual Proof
 
 ### System Diagram
 
@@ -198,7 +200,7 @@ LOG_LEVEL=INFO                                    # Logging verbosity
 python -c "from app.config import get_settings; print(get_settings())"
 ```
 
----
+## Architecture
 
 ## Quick Start
 
@@ -282,9 +284,15 @@ docker-compose down
 curl https://documind-ai-copilot.onrender.com/api/v1/health
 ```
 
----
+## Setup
 
-## API Reference
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn app.main:app --reload
+```
 
 ### Health Check
 ```http
@@ -570,9 +578,13 @@ curl -I https://api.openai.com/  # Network reachability
 4. Push to branch: `git push origin feature/amazing-feature`
 5. Open Pull Request
 
----
+- Add a seeded evaluation dataset for policy QA.
+- Add persistent vector storage for multi-instance deployments.
+- Add authentication for uploads and admin actions.
+- Add CI gates for tests and linting.
+- Add demo deployment with sample policy documents.
 
-## License
+## Author
 
 This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
 
