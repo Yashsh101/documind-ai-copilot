@@ -1,0 +1,125 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>DocuMind AI Copilot</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:#0a0f1e;color:#e8edf5;height:100vh;overflow:hidden}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2a3248;border-radius:3px}
+.app{display:flex;height:100dvh;width:100%}
+.sidebar{width:280px;min-width:280px;background:rgba(18,24,42,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-right:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;transition:transform .3s}
+.sidebar-header{padding:20px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.sidebar-header h1{font-size:18px;font-weight:700;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sidebar-header p{font-size:11px;color:#6b7280;margin-top:2px}
+.upload-zone{margin:12px 16px;padding:20px 12px;border:1.5px dashed rgba(96,165,250,0.25);border-radius:12px;text-align:center;cursor:pointer;transition:all .3s;background:rgba(96,165,250,0.04)}
+.upload-zone:hover,.upload-zone.dragover{border-color:#60a5fa;background:rgba(96,165,250,0.1)}
+.upload-zone p{font-size:12px;color:#9ca3af}
+.upload-zone .hint{font-size:10px;color:#6b7280;margin-top:4px}
+.doc-list{flex:1;overflow-y:auto;padding:8px 12px}
+.doc-list h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#6b7280;padding:8px 4px 4px}
+.doc-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:rgba(255,255,255,0.03);font-size:13px}
+.doc-item:hover{background:rgba(255,255,255,0.06)}
+.doc-item .doc-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d1d5db}
+.doc-item .doc-del{background:none;border:none;color:#6b7280;cursor:pointer;padding:2px 6px;border-radius:4px}
+.doc-item .doc-del:hover{color:#ef4444;background:rgba(239,68,68,0.1)}
+.doc-empty{font-size:12px;color:#6b7280;padding:16px;text-align:center}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.messages{flex:1;overflow-y:auto;padding:24px 20px 16px;scroll-behavior:smooth}
+.message{max-width:85%;margin-bottom:16px;animation:fadeIn .3s ease}
+.message.user{margin-left:auto}
+.message.bot{margin-right:auto}
+.bubble{padding:14px 18px;border-radius:16px;line-height:1.6;font-size:14px}
+.message.user .bubble{background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;border-bottom-right-radius:4px}
+.message.bot .bubble{background:rgba(30,41,59,0.7);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.06);border-bottom-left-radius:4px}
+.message.bot .bubble p{margin:0 0 8px}
+.message.bot .bubble p:last-child{margin-bottom:0}
+.message.bot .bubble ul,.message.bot .bubble ol{padding-left:20px;margin:4px 0}
+.message.bot .bubble code{background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;font-size:13px}
+.message.bot .bubble pre{background:rgba(0,0,0,0.3);padding:12px;border-radius:8px;overflow-x:auto;margin:8px 0}
+.message.bot .bubble strong{color:#93c5fd}
+.citation-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.2);padding:2px 10px;border-radius:12px;font-size:11px;color:#93c5fd;margin:2px 3px}
+.citation-chip:hover{background:rgba(96,165,250,0.2)}
+.confidence-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.2);padding:2px 10px;border-radius:12px;font-size:11px;color:#6ee7b7;margin:4px 0 0;float:right}
+.typing-dots{display:flex;align-items:center;gap:4px;padding:14px 18px;background:rgba(30,41,59,0.7);border-radius:16px;border-bottom-left-radius:4px;width:fit-content;margin-bottom:16px}
+.typing-dots span{width:8px;height:8px;background:#60a5fa;border-radius:50%;animation:typing 1.4s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,60%,100%{opacity:.3;transform:scale(.8)}30%{opacity:1;transform:scale(1.2)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.input-wrap{position:sticky;bottom:0;padding:12px 16px 16px;background:linear-gradient(0deg,#0a0f1e 60%,transparent)}
+.input-box{display:flex;align-items:center;gap:8px;background:rgba(24,30,50,0.9);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:4px 4px 4px 16px;max-width:800px;margin:0 auto}
+.input-box:focus-within{border-color:rgba(96,165,250,0.4);box-shadow:0 0 0 3px rgba(96,165,250,0.1)}
+.input-box input{flex:1;background:none;border:none;outline:none;color:#e8edf5;font-size:14px;padding:10px 0;min-width:0}
+.input-box input::placeholder{color:#6b7280}
+.input-box button{background:linear-gradient(135deg,#2563eb,#4f46e5);border:none;color:#fff;width:40px;height:40px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.input-box button:disabled{opacity:.5;cursor:not-allowed}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:12px;font-size:13px;z-index:999;animation:slideIn .3s ease;backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08)}
+.toast.success{background:rgba(16,185,129,0.2);color:#6ee7b7}
+.toast.error{background:rgba(239,68,68,0.2);color:#fca5a5}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#6b7280;gap:12px;text-align:center;padding:20px}
+.welcome h2{font-size:20px;color:#9ca3af;font-weight:500}
+.welcome p{font-size:13px;max-width:400px;line-height:1.5}
+@media(max-width:768px){
+.sidebar{position:fixed;left:0;top:0;bottom:0;z-index:100;transform:translateX(-100%)}
+.sidebar.open{transform:translateX(0)}
+.menu-btn{display:flex!important}
+.message{max-width:95%}
+.messages{padding:16px 12px}
+}
+.menu-btn{display:none;position:fixed;top:12px;left:12px;z-index:101;background:rgba(24,30,50,0.9);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);border-radius:10px;width:36px;height:36px;cursor:pointer;align-items:center;justify-content:center;color:#e8edf5}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99}
+.overlay.show{display:block}
+</style>
+</head>
+<body>
+<button class="menu-btn" id="menuBtn" onclick="toggleSidebar()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-header"><h1>DocuMind</h1><p>AI Copilot</p></div>
+<div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+<p>Drop PDF or click to upload</p><span class="hint">Max 10MB, 100 pages</span>
+<input type="file" id="fileInput" accept=".pdf" multiple hidden onchange="handleUpload(this.files)">
+</div>
+<div class="doc-list" id="docList"><div class="doc-empty">No documents uploaded</div></div>
+</aside>
+<main class="main">
+<div class="messages" id="messages">
+<div class="welcome" id="welcome">
+<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+<h2>Ask anything about your documents</h2>
+<p>Upload PDFs using the sidebar, then ask questions. DocuMind will search and answer based on your documents.</p>
+</div>
+</div>
+<div class="input-wrap">
+<form class="input-box" id="chatForm" onsubmit="return sendMessage(event)">
+<input type="text" id="chatInput" placeholder="Ask a question..." autofocus>
+<button type="submit" id="sendBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+</form>
+</div>
+</main>
+</div>
+<script>
+const API=window.API_URL||"";const M=document.getElementById("messages");const W=document.getElementById("welcome");const I=document.getElementById("chatInput");const B=document.getElementById("sendBtn");const L=document.getElementById("docList");const S=document.getElementById("sidebar");const O=document.getElementById("overlay");let sid="web-"+Date.now();let tEl=null;
+function md(t){try{return marked.parse(t,{breaks:true})}catch(e){return t.replace(/\n/g,"<br>")}}
+function toast(msg,type="success"){const t=document.createElement("div");t.className="toast "+type;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>{t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(()=>t.remove(),300)},3000)}
+function addMsg(role,html,extra){if(W)W.style.display="none";const d=document.createElement("div");d.className="message "+role;let x="";if(extra?.citations?.length){x+='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">';extra.citations.forEach(c=>{x+='<span class="citation-chip">📄 '+c.document_id+" p."+c.page+"</span>"});x+="</div>"}if(extra?.confidence_score!=null){x+='<span class="confidence-badge">🎯 '+extra.confidence_score.toFixed(0)+"%</span>"}d.innerHTML='<div class="bubble">'+html+x+"</div>";M.appendChild(d);M.scrollTop=M.scrollHeight;return d}
+function showT(){if(W)W.style.display="none";tEl=document.createElement("div");tEl.className="typing-dots";tEl.innerHTML="<span></span><span></span><span></span>";M.appendChild(tEl);M.scrollTop=M.scrollHeight}
+function hideT(){if(tEl){tEl.remove();tEl=null}}
+async function sendMessage(e){e.preventDefault();const q=I.value.trim();if(!q)return;addMsg("user",md(q));I.value="";I.disabled=true;B.disabled=true;showT();let r="";try{const p=await fetch(API+"/api/v1/chat/stream",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,session_id:sid,history:[]})});if(!p.ok)throw new Error("HTTP "+p.status);hideT();const rd=p.body.getReader();const dc=new TextDecoder();let buf="",cits=[],conf=null,bot=null,first=true;while(true){const{done,value}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});const ls=buf.split("\n");buf=ls.pop()||"";for(const l of ls){if(!l.startsWith("data: "))continue;try{const d=JSON.parse(l.slice(6));if(d.type==="token"&&d.content){if(first){const dv=document.createElement("div");dv.className="message bot";bot=document.createElement("div");bot.className="bubble";dv.appendChild(bot);M.appendChild(dv);first=false}r+=d.content;bot.innerHTML=md(r);M.scrollTop=M.scrollHeight}else if(d.type==="metadata"){cits=d.data?.citations||[];conf=d.data?.confidence_score}else if(d.type==="error"){toast(d.content||"Error","error")}}catch(e){}}}if(bot&&(cits.length||conf!=null)){let x="";if(cits.length){x+='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">';cits.forEach(c=>{x+='<span class="citation-chip">📄 '+c.document_id+" p."+c.page+"</span>"});x+="</div>"}if(conf!=null){x+='<span class="confidence-badge">🎯 '+conf.toFixed(0)+"%</span>"}bot.innerHTML=md(r)+x}}catch(err){hideT();addMsg("bot","❌ **Error**: "+err.message);toast("Request failed: "+err.message,"error")}I.disabled=false;B.disabled=false;I.focus()}
+async function handleUpload(files){if(!files.length)return;const fd=new FormData();for(const f of files)fd.append("files",f);toast("Uploading...");try{const r=await fetch(API+"/api/v1/upload",{method:"POST",body:fd});const d=await r.json();if(d.status==="success"){toast("✅ "+d.message);loadDocs()}else{toast("❌ "+(d.message||"Upload failed"),"error")}}catch(e){toast("❌ "+e.message,"error")}document.getElementById("fileInput").value=""}
+document.getElementById("uploadZone").addEventListener("dragover",e=>{e.preventDefault();document.getElementById("uploadZone").classList.add("dragover")});document.getElementById("uploadZone").addEventListener("dragleave",()=>document.getElementById("uploadZone").classList.remove("dragover"));document.getElementById("uploadZone").addEventListener("drop",e=>{e.preventDefault();document.getElementById("uploadZone").classList.remove("dragover");if(e.dataTransfer.files.length)handleUpload(e.dataTransfer.files)});
+async function loadDocs(){try{const r=await fetch(API+"/api/v1/documents");const d=await r.json();L.innerHTML='<h3>📄 Documents</h3>';if(!d.documents||!d.documents.length){L.innerHTML+='<div class="doc-empty">No documents uploaded</div>';return}d.documents.forEach(doc=>{const el=document.createElement("div");el.className="doc-item";el.innerHTML='<span class="doc-name">📄 '+doc.document_id+'</span><button class="doc-del" onclick="deleteDoc(\''+doc.document_id+"',this)\">✕</button>";L.appendChild(el)})}catch(e){}}
+async function deleteDoc(id,btn){if(!confirm("Delete?"))return;btn.textContent="...";btn.disabled=true;try{const r=await fetch(API+"/api/v1/documents/"+encodeURIComponent(id),{method:"DELETE"});const d=await r.json();if(d.status==="ok"){toast("Deleted "+id);loadDocs()}else{toast("❌ "+d.message,"error");btn.textContent="✕";btn.disabled=false}}catch(e){toast("❌ "+e.message,"error");btn.textContent="✕";btn.disabled=false}}
+function toggleSidebar(){S.classList.toggle("open");O.classList.toggle("show")}
+document.addEventListener("DOMContentLoaded",loadDocs);
+</script>
+</body>
+</html>

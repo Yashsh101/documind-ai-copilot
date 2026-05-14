@@ -1,10 +1,7 @@
-import os
-import json
-import logging
+import os, json, logging
 from functools import lru_cache
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
 
 
 class _JSONFormatter(logging.Formatter):
@@ -14,6 +11,7 @@ class _JSONFormatter(logging.Formatter):
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
+            "request_id": getattr(record, "request_id", ""),
         }
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
@@ -36,39 +34,31 @@ logger = _make_logger("documind", os.getenv("LOG_LEVEL", "INFO"))
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    api_title: str = "DocuMind v3 — AI Customer Support Copilot"
-    api_version: str = "3.0.0"
-    data_dir: str = "data"
+    api_title: str = "DocuMind AI Copilot"
+    api_version: str = "4.0.0"
+    data_dir: str = "/tmp/documind"
     log_level: str = "INFO"
     port: int = 8000
 
+    openrouter_api_key: Optional[str] = None
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    llm_model: str = "deepseek/deepseek-chat-v3-0324:free"
+    llm_temperature: float = 0.15
+    llm_max_retries: int = 3
+
+    embedding_model: str = "all-MiniLM-L6-v2"
     chunk_size: int = 512
     chunk_overlap: int = 64
     top_k_retrieval: int = 5
-    min_relevance_score: float = 0.25
-    embedding_cache_size: int = 2000
-
-    bm25_weight: float = 0.35
-    vector_weight: float = 0.65
-    rerank_enabled: bool = True
-
-    openai_api_key: Optional[str] = None
-    openai_base_url: Optional[str] = None
-    anthropic_api_key: Optional[str] = None
-    llm_model: str = "gpt-4o-mini"
-    openai_chat_model: str = "gpt-4o-mini"
-    openai_embedding_model: str = "text-embedding-3-small"
-    llm_temperature: float = 0.15
 
     memory_window_size: int = 10
+    max_upload_size_mb: int = 10
+    max_pages: int = 100
+    rate_limit_per_minute: int = 30
 
-    cors_origins: str = "http://localhost:5173,http://localhost:3000,http://localhost:8000"
-
-    api_url: str = ""
+    cors_origins: str = "*"
 
 
 @lru_cache()
