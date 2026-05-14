@@ -1,6 +1,3 @@
-"""
-DocuMind v3 — Centralized Configuration & Structured Logging
-"""
 import os
 import json
 import logging
@@ -11,7 +8,6 @@ from pydantic import Field
 
 
 class _JSONFormatter(logging.Formatter):
-    """Production-grade structured JSON log formatter."""
     def format(self, record):
         payload = {
             "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
@@ -44,33 +40,35 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    # App
     api_title: str = "DocuMind v3 — AI Customer Support Copilot"
     api_version: str = "3.0.0"
     data_dir: str = "data"
     log_level: str = "INFO"
+    port: int = 8000
 
-    # RAG Pipeline
     chunk_size: int = 512
     chunk_overlap: int = 64
     top_k_retrieval: int = 5
     min_relevance_score: float = 0.25
     embedding_cache_size: int = 2000
 
-    # Hybrid Search Weights
     bm25_weight: float = 0.35
     vector_weight: float = 0.65
     rerank_enabled: bool = True
 
-    # OpenAI / LLM
     openai_api_key: Optional[str] = None
+    openai_base_url: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
     llm_model: str = "gpt-4o-mini"
     openai_chat_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
     llm_temperature: float = 0.15
 
-    # Memory
     memory_window_size: int = 10
+
+    cors_origins: str = "http://localhost:5173,http://localhost:3000,http://localhost:8000"
+
+    api_url: str = ""
 
 
 @lru_cache()

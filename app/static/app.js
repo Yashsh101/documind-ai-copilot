@@ -1,4 +1,6 @@
 // DOM elements
+const API_BASE = window.API_URL || "";
+
 const form = document.querySelector("#chat-form");
 const input = document.querySelector("#chat-input");
 const messages = document.querySelector("#messages");
@@ -28,7 +30,7 @@ async function sendMessage(text) {
   messages.appendChild(botMsg);
 
   try {
-    const response = await fetch("/api/v1/query", {
+    const response = await fetch(`${API_BASE}/api/v1/query`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -125,7 +127,7 @@ if (uploadBtn && fileInput) {
         formData.append("files", file);
       }
 
-      const response = await fetch("/api/v1/upload", {
+      const response = await fetch(`${API_BASE}/api/v1/upload`, {
         method: "POST",
         body: formData
       });
@@ -154,7 +156,7 @@ async function loadDocuments() {
   if (!documentsList) return;
 
   try {
-    const response = await fetch("/api/v1/documents");
+    const response = await fetch(`${API_BASE}/api/v1/documents`);
     const data = await response.json();
 
     documentsList.innerHTML = "<h3>Docs</h3>";

@@ -41,3 +41,18 @@ htmlcov/
 *.tmp
 *.pdf
 replacements.txt
+
+# OpenCode
+.opencode/
+opencode.jsonc
+config.json
+
+# Screenshots / reports
+screenshot*.png
+*_REPORT_*.md
+*_REPORT_*.txt
+AUDIT_*.txt
+FIX_*.md
+DIAGNOSTIC_*.md
+ERROR_*.md
+VERIFICATION.md

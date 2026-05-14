@@ -1,50 +1,40 @@
-"""
-DocuMind v3 — Embedding Service
-
-Generates dense vector embeddings via OpenAI with in-memory caching.
-"""
-import os
 from typing import List, Optional
 from openai import OpenAI, RateLimitError, APIError
 from app.config import get_settings, logger
-from app.core.cache import embedding_cache
-
-"""
-DocuMind v3 — Embedding Service
-
-Generates dense vector embeddings via OpenAI with in-memory caching.
-"""
-import os
-from typing import List, Optional
-from openai import OpenAI, RateLimitError, APIError
-from app.config import get_settings, logger
-from app.core.cache import embedding_cache
-from app.core.exceptions import OpenAIQuotaExceededException, OpenAIAPIError
+from app.services.rag import TTLCache, OpenAIQuotaExceededException, OpenAIAPIError
 
 s = get_settings()
+embedding_cache = TTLCache(max_size=2000, ttl_seconds=7200)
+_EMBEDDING_DIM_CACHE = None
 
 
 def _get_openai_client() -> Optional[OpenAI]:
     api_key = s.openai_api_key
     if not api_key:
         return None
+    if s.openai_base_url:
+        return OpenAI(api_key=api_key, base_url=s.openai_base_url)
     return OpenAI(api_key=api_key)
 
-_EMBEDDING_DIM = 1536
-_ZERO_VECTOR = [0.0] * _EMBEDDING_DIM
+
+def _get_embedding_dim() -> int:
+    global _EMBEDDING_DIM_CACHE
+    if _EMBEDDING_DIM_CACHE is not None:
+        return _EMBEDDING_DIM_CACHE
+    if s.openai_embedding_model == "nomic-embed-text":
+        _EMBEDDING_DIM_CACHE = 768
+    else:
+        _EMBEDDING_DIM_CACHE = 1536
+    return _EMBEDDING_DIM_CACHE
+
+
+def _get_zero_vector() -> list:
+    return [0.0] * _get_embedding_dim()
 
 
 def get_query_embedding(text: str) -> List[float]:
-    """
-    Get embedding for a single query text. Uses TTL cache to avoid
-    redundant OpenAI API calls.
-    
-    Raises:
-        OpenAIQuotaExceededException: If OpenAI quota is exceeded
-        OpenAIAPIError: If OpenAI API call fails
-    """
     if not text or not text.strip():
-        return _ZERO_VECTOR
+        return _get_zero_vector()
 
     cached = embedding_cache.get(text)
     if cached is not None:
@@ -53,18 +43,17 @@ def get_query_embedding(text: str) -> List[float]:
     client = _get_openai_client()
     if client is None:
         logger.warning("OPENAI_API_KEY not set; returning zero embedding.")
-        return _ZERO_VECTOR
+        return _get_zero_vector()
 
     try:
         response = client.embeddings.create(
             model=s.openai_embedding_model,
             input=text,
         )
-        embedding = response.data[0].embedding if response.data else _ZERO_VECTOR
+        embedding = response.data[0].embedding if response.data else _get_zero_vector()
         embedding_cache.set(text, embedding)
         return embedding
     except RateLimitError as exc:
-        # Check if this is an insufficient_quota error
         error_msg = str(exc)
         if "insufficient_quota" in error_msg.lower():
             logger.error(f"OpenAI quota exceeded: {exc}")
@@ -80,12 +69,7 @@ def get_query_embedding(text: str) -> List[float]:
         raise OpenAIAPIError()
 
 
-
 def get_document_embeddings(texts: List[str]) -> List[List[float]]:
-    """
-    Batch compute embeddings for document chunks.
-    Sequential for fault tolerance — each chunk gets its own retry cycle.
-    """
     embeddings = []
     for i, text in enumerate(texts):
         emb = get_query_embedding(text)
