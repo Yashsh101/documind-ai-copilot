@@ -41,3 +41,15 @@ htmlcov/
 *.tmp
 *.pdf
 replacements.txt
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+credentials.json
+service-account*.json
+node_modules/
+dist/
+build/
+.vercel/
+.railway/
