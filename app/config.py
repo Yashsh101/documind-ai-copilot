@@ -38,10 +38,12 @@ class Settings(BaseSettings):
 
     api_title: str = "DocuMind AI Copilot"
     api_version: str = "4.0.0"
-    data_dir: str = "/tmp/documind"
+    data_dir: str = "data"
     log_level: str = "INFO"
     port: int = 8000
 
+    anthropic_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
     openrouter_api_key: Optional[str] = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     llm_model: str = "deepseek/deepseek-chat-v3-0324:free"
@@ -54,11 +56,12 @@ class Settings(BaseSettings):
     top_k_retrieval: int = 5
 
     memory_window_size: int = 10
-    max_upload_size_mb: int = 10
+    max_upload_size_mb: int = 50
     max_pages: int = 100
     rate_limit_per_minute: int = 30
 
     cors_origins: str = "*"
+    frontend_api_url: str = ""
 
 
 @lru_cache()

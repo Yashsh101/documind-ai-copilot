@@ -3,11 +3,8 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings, logger
 from app.routes import upload, chat, health
@@ -33,17 +30,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-limiter = Limiter(key_func=get_remote_address, default_limits=[f"{s.rate_limit_per_minute}/minute"])
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
+origins = [o.strip() for o in s.cors_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins if origins else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 _request_count = 0
 _error_count = 0
@@ -65,6 +60,16 @@ async def request_id_middleware(request: Request, call_next):
         global _error_count
         _error_count += 1
     return response
+
+
+@app.get("/env.js")
+async def env_js():
+    api_url = s.frontend_api_url or ""
+    return Response(
+        content=f"window.API_URL={json.dumps(api_url)};",
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 app.include_router(health.router)

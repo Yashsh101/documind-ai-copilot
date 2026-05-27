@@ -85,7 +85,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;ba
 <div class="sidebar-header"><h1>DocuMind</h1><p>AI Copilot</p></div>
 <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-<p>Drop PDF or click to upload</p><span class="hint">Max 10MB, 100 pages</span>
+<p>Drop PDF or click to upload</p><span class="hint">Max 50MB, 100 pages</span>
 <input type="file" id="fileInput" accept=".pdf" multiple hidden onchange="handleUpload(this.files)">
 </div>
 <div class="doc-list" id="docList"><div class="doc-empty">No documents uploaded</div></div>
@@ -106,6 +106,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;ba
 </div>
 </main>
 </div>
+<script src="/env.js"></script>
 <script>
 const API=window.API_URL||"";const M=document.getElementById("messages");const W=document.getElementById("welcome");const I=document.getElementById("chatInput");const B=document.getElementById("sendBtn");const L=document.getElementById("docList");const S=document.getElementById("sidebar");const O=document.getElementById("overlay");let sid="web-"+Date.now();let tEl=null;
 function md(t){try{return marked.parse(t,{breaks:true})}catch(e){return t.replace(/\n/g,"<br>")}}
