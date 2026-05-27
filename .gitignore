@@ -10,6 +10,8 @@ env/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 *.env.local
 
 # Data and uploads
@@ -41,3 +43,13 @@ htmlcov/
 *.tmp
 *.pdf
 replacements.txt
+
+# OpenCode
+.opencode/
+opencode.jsonc
+
+# Templates
+app/static/
+*.faiss
+*.pkl
+*.meta
