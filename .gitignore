@@ -43,6 +43,7 @@ htmlcov/
 *.tmp
 *.pdf
 replacements.txt
+<<<<<<< HEAD
 
 # OpenCode
 .opencode/
@@ -53,3 +54,17 @@ app/static/
 *.faiss
 *.pkl
 *.meta
+=======
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+credentials.json
+service-account*.json
+node_modules/
+dist/
+build/
+.vercel/
+.railway/
+>>>>>>> ead3d87411e39dbc03e6eee40a48d21d368f81c5
