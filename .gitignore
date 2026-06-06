@@ -1,70 +1,74 @@
-# Byte-compiled / optimized / DLL files
+# ── Python ────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
 
-# Virtual environments
+# ── Virtual envs ──────────────────────────────────────
 .venv/
 venv/
 env/
+.Python
+*.egg-info/
+dist/
+build/
 
-# Environment variables
+# ── Secrets (NEVER commit these) ──────────────────────
 .env
 .env.*
 !.env.example
 *.env.local
-
-# Data and uploads
-data/
-vector_store/
-uploads/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Tests
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Backups and temp files
-*.bak
-*.old
-*.tmp
-*.pdf
-replacements.txt
-<<<<<<< HEAD
-
-# OpenCode
-.opencode/
-opencode.jsonc
-
-# Templates
-app/static/
-*.faiss
-*.pkl
-*.meta
-=======
-.env.*
-!.env.example
 secrets/
 *.pem
 *.key
 credentials.json
 service-account*.json
+
+# ── ML artifacts ──────────────────────────────────────
+*.faiss
+*.pkl
+*.pickle
+*.meta
+chroma_db/
+faiss_index/
+vector_store/
+data/
+
+# ── Uploads & runtime data ────────────────────────────
+uploads/
+
+# ── Logs ──────────────────────────────────────────────
+*.log
+*.log.*
+
+# ── Node / Frontend ───────────────────────────────────
 node_modules/
-dist/
-build/
+frontend/dist/
+frontend/build/
+frontend/.next/
+
+# ── Deployment ────────────────────────────────────────
 .vercel/
 .railway/
->>>>>>> ead3d87411e39dbc03e6eee40a48d21d368f81c5
+
+# ── IDE / OS ──────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Tests ─────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Misc ──────────────────────────────────────────────
+*.bak
+*.old
+*.tmp
+.opencode/
+opencode.jsonc
+app/static/

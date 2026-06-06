@@ -25,18 +25,27 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=s.api_title,
     version=s.api_version,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if os.getenv("ENVIRONMENT") != "production" else None,
+    redoc_url="/redoc" if os.getenv("ENVIRONMENT") != "production" else None,
     lifespan=lifespan,
 )
 
-origins = [o.strip() for o in s.cors_origins.split(",") if o.strip()]
+# ── CORS: locked to explicit origins in production ─────────────────────────────
+_raw_origins = s.cors_origins.strip()
+if _raw_origins == "*":
+    # Wildcard only permitted locally; prod must set CORS_ORIGINS explicitly
+    origins = ["*"]
+    if os.getenv("ENVIRONMENT") == "production":
+        logger.warning("CORS_ORIGINS is '*' in production — lock this to your Vercel domain!")
+else:
+    origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins if origins else ["*"],
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )
 
 

@@ -1,39 +1,38 @@
+# ── Stage 1: builder ──────────────────────────────────────────────────────────
 FROM python:3.11-slim AS builder
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential \
+# System deps for FAISS + sentence-transformers native compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --upgrade pip \
-    && pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+RUN pip install --no-cache-dir --user -r requirements.txt
 
+# ── Stage 2: runtime ──────────────────────────────────────────────────────────
 FROM python:3.11-slim AS runtime
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8000
 
 WORKDIR /app
 
-RUN addgroup --system appuser \
-    && adduser --system --ingroup appuser appuser
+# libgomp required at runtime by FAISS
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir /wheels/* \
-    && rm -rf /wheels
+COPY --from=builder /root/.local /root/.local
+COPY ./app ./app
+COPY ./config.json ./config.json
 
-COPY . .
-RUN mkdir -p data \
-    && chown -R appuser:appuser /app
-
-USER appuser
+ENV PATH=/root/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8000
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Single worker on free tier (512MB RAM); sentence-transformers loads model once per worker
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

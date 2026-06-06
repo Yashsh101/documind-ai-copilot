@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: documind-ai-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false          # set to your Vercel URL: https://your-app.vercel.app
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8000"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DATA_DIR
+        value: /tmp/data     # free tier: no persistent disk; use /tmp
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "50"
